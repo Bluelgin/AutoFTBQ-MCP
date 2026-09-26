@@ -24,43 +24,43 @@ public final class McpToolService {
     private final TransactionStagingService transactions = new TransactionStagingService();
 
     public JsonObject invoke(String name, JsonObject args) {
-        if (args == null) args = new JsonObject();
+        final JsonObject arguments = args == null ? new JsonObject() : args;
         return switch (name) {
             case "autoftbq.health" -> health();
             case "minecraft.capabilities" -> client(() -> GameDataCatalog.query(withKind(new JsonObject(), "capabilities")));
             case "minecraft.search_registry" -> searchRegistry(args);
             case "minecraft.validate_ids" -> validateIds(args);
-            case "minecraft.inspect_item" -> client(() -> GameDataCatalog.query(withKind(args.deepCopy(), "item_evidence")));
-            case "minecraft.search_recipes" -> client(() -> GameDataCatalog.query(withKind(args.deepCopy(), "recipes")));
-            case "minecraft.inspect_resource" -> serverResource(args);
+            case "minecraft.inspect_item" -> client(() -> GameDataCatalog.query(withKind(arguments.deepCopy(), "item_evidence")));
+            case "minecraft.search_recipes" -> client(() -> GameDataCatalog.query(withKind(arguments.deepCopy(), "recipes")));
+            case "minecraft.inspect_resource" -> serverResource(arguments);
 
             case "ftbq.get_context" -> client(() -> adapter().context());
             case "ftbq.get_book" -> client(() -> adapter().book());
-            case "ftbq.get_chapter" -> client(() -> adapter().chapter(required(args, "id")));
-            case "ftbq.get_quest" -> client(() -> adapter().quest(required(args, "id")));
-            case "ftbq.get_object" -> client(() -> adapter().object(required(args, "id")));
+            case "ftbq.get_chapter" -> client(() -> adapter().chapter(required(arguments, "id")));
+            case "ftbq.get_quest" -> client(() -> adapter().quest(required(arguments, "id")));
+            case "ftbq.get_object" -> client(() -> adapter().object(required(arguments, "id")));
             case "ftbq.list_task_types" -> client(() -> adapter().listTypes("task"));
             case "ftbq.list_reward_types" -> client(() -> adapter().listTypes("reward"));
-            case "ftbq.get_type_schema" -> client(() -> adapter().typeSchema(required(args, "kind"), required(args, "type_id")));
+            case "ftbq.get_type_schema" -> client(() -> adapter().typeSchema(required(arguments, "kind"), required(arguments, "type_id")));
 
-            case "ftbq.create_chapter" -> commitSingle(args, createChapter(args));
-            case "ftbq.create_quest" -> commitSingle(args, createQuest(args));
-            case "ftbq.update_quest" -> commitSingle(args, updateQuest(args));
-            case "ftbq.add_task" -> commitSingle(args, addTask(args));
-            case "ftbq.add_reward" -> commitSingle(args, addReward(args));
-            case "ftbq.remove_quest_object" -> commitSingle(args, op("remove_quest_object", "object_id", required(args, "object_id")));
-            case "ftbq.delete_quest" -> commitSingle(args, op("delete_quest", "quest_id", required(args, "quest_id")));
-            case "ftbq.delete_chapter" -> commitSingle(args, op("delete_chapter", "chapter_id", required(args, "chapter_id")));
-            case "ftbq.connect_quests" -> commitSingle(args, dependency(args));
-            case "ftbq.apply_dependency_plan" -> commit(args, dependencyPlan(args));
-            case "ftbq.apply_operations" -> commit(args, requiredArray(args, "operations"));
-            case "ftbq.undo_last" -> undo(args);
+            case "ftbq.create_chapter" -> commitSingle(arguments, createChapter(args));
+            case "ftbq.create_quest" -> commitSingle(arguments, createQuest(args));
+            case "ftbq.update_quest" -> commitSingle(arguments, updateQuest(args));
+            case "ftbq.add_task" -> commitSingle(arguments, addTask(args));
+            case "ftbq.add_reward" -> commitSingle(arguments, addReward(args));
+            case "ftbq.remove_quest_object" -> commitSingle(arguments, op("remove_quest_object", "object_id", required(args, "object_id")));
+            case "ftbq.delete_quest" -> commitSingle(arguments, op("delete_quest", "quest_id", required(args, "quest_id")));
+            case "ftbq.delete_chapter" -> commitSingle(arguments, op("delete_chapter", "chapter_id", required(args, "chapter_id")));
+            case "ftbq.connect_quests" -> commitSingle(arguments, dependency(args));
+            case "ftbq.apply_dependency_plan" -> commit(arguments, dependencyPlan(args));
+            case "ftbq.apply_operations" -> commit(arguments, requiredArray(args, "operations"));
+            case "ftbq.undo_last" -> undo(arguments);
 
             case "ftbq.transaction_begin" -> transactions.begin();
-            case "ftbq.transaction_stage" -> transactions.stage(required(args, "transaction_id"), requiredArray(args, "operations"));
-            case "ftbq.transaction_status" -> transactions.status(required(args, "transaction_id"));
-            case "ftbq.transaction_commit" -> transactions.commit(required(args, "transaction_id"));
-            case "ftbq.transaction_abort" -> transactions.abort(required(args, "transaction_id"));
+            case "ftbq.transaction_stage" -> transactions.stage(required(arguments, "transaction_id"), requiredArray(args, "operations"));
+            case "ftbq.transaction_status" -> transactions.status(required(arguments, "transaction_id"));
+            case "ftbq.transaction_commit" -> transactions.commit(required(arguments, "transaction_id"));
+            case "ftbq.transaction_abort" -> transactions.abort(required(arguments, "transaction_id"));
             default -> error("unknown_tool", "Unknown tool: " + name);
         };
     }
@@ -89,21 +89,21 @@ public final class McpToolService {
     private JsonObject searchRegistry(JsonObject args) {
         String registry = optional(args, "registry").toLowerCase(java.util.Locale.ROOT);
         if ("structure".equals(registry)) {
-            JsonObject serverArgs = args.deepCopy();
+            JsonObject serverArgs = arguments.deepCopy();
             serverArgs.addProperty("request_kind", "registry_page");
             return serverData(serverArgs);
         }
-        return client(() -> GameDataCatalog.query(withKind(args.deepCopy(), "registry_page")));
+        return client(() -> GameDataCatalog.query(withKind(arguments.deepCopy(), "registry_page")));
     }
 
     private JsonObject validateIds(JsonObject args) {
         String registry = optional(args, "registry").toLowerCase(java.util.Locale.ROOT);
         if ("structure".equals(registry)) {
-            JsonObject serverArgs = args.deepCopy();
+            JsonObject serverArgs = arguments.deepCopy();
             serverArgs.addProperty("request_kind", "validate_registry_ids");
             return serverData(serverArgs);
         }
-        return client(() -> adapter().query("validate_registry_ids", args));
+        return client(() -> adapter().query("validate_registry_ids", arguments));
     }
 
     private JsonObject serverResource(JsonObject args) {
@@ -195,7 +195,7 @@ public final class McpToolService {
     }
 
     private static JsonObject addTask(JsonObject args) {
-        String type = normalizeType(required(args, "type_id"));
+        String type = normalizeType(required(arguments, "type_id"));
         JsonObject op = new JsonObject();
         if ("item".equals(type) && args.has("item_id")) {
             op.addProperty("kind", "add_item_task");
@@ -218,13 +218,13 @@ public final class McpToolService {
         op.addProperty("kind", "add_typed_quest_object");
         op.addProperty("quest_id", required(args, "quest_id"));
         op.addProperty("object_kind", "task");
-        op.addProperty("type_id", required(args, "type_id"));
+        op.addProperty("type_id", required(arguments, "type_id"));
         op.addProperty("data_snbt", args.has("data_snbt") ? args.get("data_snbt").getAsString() : "{}");
         return op;
     }
 
     private static JsonObject addReward(JsonObject args) {
-        String type = normalizeType(required(args, "type_id"));
+        String type = normalizeType(required(arguments, "type_id"));
         JsonObject op = new JsonObject();
         if ("item".equals(type) && args.has("item_id")) {
             op.addProperty("kind", "add_item_reward");
@@ -242,7 +242,7 @@ public final class McpToolService {
         op.addProperty("kind", "add_typed_quest_object");
         op.addProperty("quest_id", required(args, "quest_id"));
         op.addProperty("object_kind", "reward");
-        op.addProperty("type_id", required(args, "type_id"));
+        op.addProperty("type_id", required(arguments, "type_id"));
         op.addProperty("data_snbt", args.has("data_snbt") ? args.get("data_snbt").getAsString() : "{}");
         return op;
     }
