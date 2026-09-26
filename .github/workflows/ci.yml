@@ -2,7 +2,13 @@ name: build
 
 on:
   push:
+    branches:
+      - main
   pull_request:
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   forge-1-20-1-ftbq-2001:
