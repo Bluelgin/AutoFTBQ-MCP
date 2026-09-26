@@ -7,6 +7,7 @@ import dev.ftb.mods.ftbquests.client.ClientQuestFile;
 import dev.ftb.mods.ftbquests.quest.Quest;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
@@ -259,7 +260,16 @@ public final class FTBQ2001QueryExecutor {
             boolean exists = id != null && switch (registry) {
                 case "item" -> BuiltInRegistries.ITEM.getOptional(id).isPresent();
                 case "block" -> BuiltInRegistries.BLOCK.getOptional(id).isPresent();
-                case "entity" -> BuiltInRegistries.ENTITY_TYPE.getOptional(id).isPresent();
+                case "entity", "entity_type" -> BuiltInRegistries.ENTITY_TYPE.getOptional(id).isPresent();
+                case "fluid" -> BuiltInRegistries.FLUID.getOptional(id).isPresent();
+                case "mob_effect" -> BuiltInRegistries.MOB_EFFECT.getOptional(id).isPresent();
+                case "stat", "custom_stat" -> BuiltInRegistries.CUSTOM_STAT.getOptional(id).isPresent();
+                case "biome" -> Minecraft.getInstance().level != null
+                        && Minecraft.getInstance().level.registryAccess().registry(Registries.BIOME)
+                        .map(value -> value.containsKey(id)).orElse(false);
+                case "structure" -> Minecraft.getInstance().level != null
+                        && Minecraft.getInstance().level.registryAccess().registry(Registries.STRUCTURE)
+                        .map(value -> value.containsKey(id)).orElse(false);
                 default -> false;
             };
             JsonObject value = new JsonObject();
@@ -269,15 +279,17 @@ public final class FTBQ2001QueryExecutor {
                 String name = switch (registry) {
                     case "item" -> BuiltInRegistries.ITEM.get(id).getDescription().getString();
                     case "block" -> BuiltInRegistries.BLOCK.get(id).getName().getString();
-                    case "entity" -> BuiltInRegistries.ENTITY_TYPE.get(id).getDescription().getString();
-                    default -> "";
+                    case "entity", "entity_type" -> BuiltInRegistries.ENTITY_TYPE.get(id).getDescription().getString();
+                    case "mob_effect" -> BuiltInRegistries.MOB_EFFECT.get(id).getDisplayName().getString();
+                    default -> id.toString();
                 };
                 value.addProperty("name", name);
             }
             results.add(value);
         }
-        if (!registry.equals("item") && !registry.equals("block") && !registry.equals("entity")) {
-            return error("registry 仅支持 item、block 或 entity");
+        if (!java.util.Set.of("item", "block", "entity", "entity_type", "fluid",
+                "mob_effect", "stat", "custom_stat", "biome", "structure").contains(registry)) {
+            return error("当前适配器不支持该 registry 的精确 ID 校验");
         }
         JsonObject response = new JsonObject();
         response.addProperty("registry", registry);
