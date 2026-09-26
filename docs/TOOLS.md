@@ -41,7 +41,9 @@ The 2001 client adapter currently covers:
 - stat / custom_stat
 - recipe_type
 - biome
-- structure
+- dimension (from FTB Library's server-registry snapshot)
+- advancement (from FTB Library's server-registry snapshot)
+- structure (queried authoritatively from the Minecraft server)
 
 Results include a `data_version`. If the game reloads tags/recipes while paging, the next request can return `stale_version` so the agent restarts from page zero.
 
@@ -152,6 +154,8 @@ Any runtime-registered type can fall back to:
 - raw `data_snbt`
 
 The server still creates the real FTBQ object; unsupported types are rejected.
+
+`ftbquests:command` rewards are rejected by default even through the generic/raw path. A server owner must explicitly set `allowCommandRewards=true` in `autoftbq-mcp.json` before an agent can create or overwrite command rewards.
 
 ### ftbq.connect_quests
 
