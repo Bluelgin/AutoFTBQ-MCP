@@ -29,4 +29,9 @@ public final class ForgeGameServerGateway implements GameServerGateway {
                 .thenApply(value -> new ProposalUndoResult(
                         value.success(), value.status(), value.message(), value.bookRevision()));
     }
+
+    @Override
+    public CompletableFuture<String> queryData(String argumentsJson) {
+        return ForgeMcpNetwork.queryData(argumentsJson);
+    }
 }
