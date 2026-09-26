@@ -706,16 +706,30 @@ public final class FTBQ2001ProposalExecutor {
             QuestObjectBase existing = file.getBase(requiredId(operation, "object_id"));
             if (!(existing instanceof Reward reward)) return;
             typeId = reward.getType().getTypeId().toString();
+        } else if ("upsert_reward_table_raw".equals(kind)) {
+            CompoundTag tableData = requiredSnbt(operation, "data_snbt");
+            ListTag rewards = tableData.getList("rewards", net.minecraft.nbt.Tag.TAG_COMPOUND);
+            for (int i = 0; i < rewards.size(); i++) {
+                String embeddedType = rewards.getCompound(i).getString("type");
+                if ("ftbquests:command".equals(normalizeTypeId(embeddedType.isBlank() ? "item" : embeddedType))) {
+                    throw commandRewardDisabled();
+                }
+            }
+            return;
         } else {
             return;
         }
 
         if ("ftbquests:command".equals(normalizeTypeId(typeId))) {
-            throw new IllegalArgumentException(
-                    "Command rewards are disabled by server policy. Set allowCommandRewards=true "
-                            + "in autoftbq-mcp.json only on a trusted authoring setup."
-            );
+            throw commandRewardDisabled();
         }
+    }
+
+    private static IllegalArgumentException commandRewardDisabled() {
+        return new IllegalArgumentException(
+                "Command rewards are disabled by server policy. Set allowCommandRewards=true "
+                        + "in autoftbq-mcp.json only on a trusted authoring setup."
+        );
     }
 
     private static String normalizeTypeId(String typeId) {
