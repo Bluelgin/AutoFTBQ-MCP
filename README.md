@@ -88,7 +88,7 @@ The runtime currently serves both MCP lifecycle eras on one endpoint:
 - modern: `2026-07-28` using `server/discover`
 - legacy Streamable HTTP: `2025-11-25`, `2025-06-18`, `2025-03-26` using `initialize`
 
-Remote access is disabled by default. See [Security](docs/SECURITY.md).
+Remote access is disabled by default. Command rewards are also disabled by default because they can execute server commands. See [Security](docs/SECURITY.md).
 
 ## Core tools
 
@@ -192,6 +192,8 @@ gradlew.bat build
 ```
 
 Output is under `build/libs/`.
+
+For a running-game transport check, use the zero-dependency [runtime smoke test](docs/SMOKE_TEST.md).
 
 ## Status
 
