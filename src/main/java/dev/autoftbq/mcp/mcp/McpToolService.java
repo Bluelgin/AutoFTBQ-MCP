@@ -53,6 +53,7 @@ public final class McpToolService {
             case "ftbq.add_task" -> commitSingle(arguments, addTask(arguments));
             case "ftbq.add_reward" -> commitSingle(arguments, addReward(arguments));
             case "ftbq.move_quest_object" -> commitSingle(arguments, moveQuestObject(arguments));
+            case "ftbq.update_quest_object" -> commitSingle(arguments, patchQuestObject(arguments));
             case "ftbq.remove_quest_object" -> commitSingle(arguments, op("remove_quest_object", "object_id", required(arguments, "object_id")));
             case "ftbq.delete_quest" -> commitSingle(arguments, op("delete_quest", "quest_id", required(arguments, "quest_id")));
             case "ftbq.delete_chapter" -> commitSingle(arguments, op("delete_chapter", "chapter_id", required(arguments, "chapter_id")));
@@ -298,6 +299,24 @@ public final class McpToolService {
         op.addProperty("object_kind", "reward");
         op.addProperty("type_id", required(args, "type_id"));
         op.addProperty("data_snbt", args.has("data_snbt") ? args.get("data_snbt").getAsString() : "{}");
+        return op;
+    }
+
+    private static JsonObject patchQuestObject(JsonObject args) {
+        if (!args.has("changes_snbt") && !args.has("remove_fields")) {
+            throw new IllegalArgumentException("update_quest_object requires changes_snbt or remove_fields");
+        }
+        JsonObject op = new JsonObject();
+        op.addProperty("kind", "patch_quest_object");
+        op.addProperty("object_id", required(args, "object_id"));
+        op.addProperty("changes_snbt",
+                args.has("changes_snbt") ? args.get("changes_snbt").getAsString() : "{}");
+        if (args.has("remove_fields")) {
+            if (!args.get("remove_fields").isJsonArray()) {
+                throw new IllegalArgumentException("remove_fields must be an array");
+            }
+            op.add("remove_fields", args.get("remove_fields").deepCopy());
+        }
         return op;
     }
 
