@@ -28,8 +28,8 @@ public final class McpToolService {
         return switch (name) {
             case "autoftbq.health" -> health();
             case "minecraft.capabilities" -> client(() -> GameDataCatalog.query(withKind(new JsonObject(), "capabilities")));
-            case "minecraft.search_registry" -> client(() -> GameDataCatalog.query(withKind(args.deepCopy(), "registry_page")));
-            case "minecraft.validate_ids" -> client(() -> adapter().query("validate_registry_ids", args));
+            case "minecraft.search_registry" -> searchRegistry(args);
+            case "minecraft.validate_ids" -> validateIds(args);
             case "minecraft.inspect_item" -> client(() -> GameDataCatalog.query(withKind(args.deepCopy(), "item_evidence")));
             case "minecraft.search_recipes" -> client(() -> GameDataCatalog.query(withKind(args.deepCopy(), "recipes")));
             case "minecraft.inspect_resource" -> serverResource(args);
@@ -86,7 +86,31 @@ public final class McpToolService {
         return result;
     }
 
+    private JsonObject searchRegistry(JsonObject args) {
+        String registry = optional(args, "registry").toLowerCase(java.util.Locale.ROOT);
+        if ("structure".equals(registry)) {
+            JsonObject serverArgs = args.deepCopy();
+            serverArgs.addProperty("request_kind", "registry_page");
+            return serverData(serverArgs);
+        }
+        return client(() -> GameDataCatalog.query(withKind(args.deepCopy(), "registry_page")));
+    }
+
+    private JsonObject validateIds(JsonObject args) {
+        String registry = optional(args, "registry").toLowerCase(java.util.Locale.ROOT);
+        if ("structure".equals(registry)) {
+            JsonObject serverArgs = args.deepCopy();
+            serverArgs.addProperty("request_kind", "validate_registry_ids");
+            return serverData(serverArgs);
+        }
+        return client(() -> adapter().query("validate_registry_ids", args));
+    }
+
     private JsonObject serverResource(JsonObject args) {
+        return serverData(args);
+    }
+
+    private JsonObject serverData(JsonObject args) {
         try {
             String raw = awaitServer(() -> ForgeMcpNetwork.queryData(args.toString()), 10);
             return JsonParser.parseString(raw).getAsJsonObject();
