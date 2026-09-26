@@ -4,9 +4,9 @@ import java.util.Objects;
 
 public final class GamePlatform {
     private static volatile GameServerGateway serverGateway;
+    private static volatile ModEnvironment environment;
 
-    private GamePlatform() {
-    }
+    private GamePlatform() {}
 
     public static void installServerGateway(GameServerGateway value) {
         serverGateway = Objects.requireNonNull(value);
@@ -15,6 +15,16 @@ public final class GamePlatform {
     public static GameServerGateway serverGateway() {
         GameServerGateway value = serverGateway;
         if (value == null) throw new IllegalStateException("Game server gateway is not installed");
+        return value;
+    }
+
+    public static void installEnvironment(ModEnvironment value) {
+        environment = Objects.requireNonNull(value);
+    }
+
+    public static ModEnvironment environment() {
+        ModEnvironment value = environment;
+        if (value == null) throw new IllegalStateException("Mod environment is not installed");
         return value;
     }
 }
