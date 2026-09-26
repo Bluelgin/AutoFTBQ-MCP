@@ -27,8 +27,9 @@ public record ToolDefinition(String name, String description, JsonObject inputSc
         annotations.addProperty("readOnlyHint", readOnly);
         annotations.addProperty("destructiveHint", !readOnly && DESTRUCTIVE.contains(name));
         annotations.addProperty("idempotentHint", readOnly);
-        annotations.addProperty("openWorldHint", name.startsWith("minecraft.")
-                || name.startsWith("ftbq."));
+        // AutoFTBQ tools are bounded to the user's local game / connected game server.
+        // They do not browse the public internet or arbitrary external entities.
+        annotations.addProperty("openWorldHint", false);
         value.add("annotations", annotations);
         return value;
     }
