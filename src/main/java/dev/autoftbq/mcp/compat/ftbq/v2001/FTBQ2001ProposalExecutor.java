@@ -104,9 +104,12 @@ public final class FTBQ2001ProposalExecutor {
                     if (!element.isJsonObject()) throw new IllegalArgumentException("提案操作必须是对象");
                     JsonObject operation = element.getAsJsonObject();
                     String kind = requiredString(operation, "kind", 64);
-                    validatePolicy(operation, kind, allowCommandRewards);
+                    validatePolicy(file, operation, kind, allowCommandRewards);
                     if (kind.endsWith("_raw") || operation.has("data_snbt")) {
                         requiredSnbt(operation, "data_snbt");
+                    }
+                    if (operation.has("changes_snbt")) {
+                        requiredSnbt(operation, "changes_snbt");
                     }
                 } catch (Exception error) {
                     throw new IllegalArgumentException("第 " + (i + 1) + " 项：" + safe(error));
@@ -361,6 +364,14 @@ public final class FTBQ2001ProposalExecutor {
                 if (object != null && object.getObjectType() != objectType) {
                     throw new IllegalArgumentException("任务对象 ID 类型冲突：" + operation.get("object_id"));
                 }
+                if (object instanceof Task task
+                        && !normalizeTypeId(task.getType().getTypeId().toString()).equals(normalizeTypeId(typeId))) {
+                    throw new IllegalArgumentException("不能通过 raw upsert 改变已有 task 的 type_id");
+                }
+                if (object instanceof Reward reward
+                        && !normalizeTypeId(reward.getType().getTypeId().toString()).equals(normalizeTypeId(typeId))) {
+                    throw new IllegalArgumentException("不能通过 raw upsert 改变已有 reward 的 type_id");
+                }
                 boolean created = object == null;
                 if (object == null) {
                     CompoundTag extra = new CompoundTag();
@@ -388,6 +399,39 @@ public final class FTBQ2001ProposalExecutor {
                 if (object == null) throw new IllegalArgumentException("当前整合包不支持类型：" + typeId);
                 object.readData(data);
                 object.onCreated();
+            }
+            case "patch_quest_object" -> {
+                rejectUnknown(operation, "kind", "object_id", "changes_snbt", "remove_fields");
+                QuestObjectBase object = file.getBase(requiredId(operation, "object_id"));
+                if (!(object instanceof Task) && !(object instanceof Reward)) {
+                    throw new IllegalArgumentException("找不到可更新的任务条件或奖励");
+                }
+
+                CompoundTag data = new CompoundTag();
+                object.writeData(data);
+                CompoundTag changes = requiredSnbt(operation, "changes_snbt");
+                for (String key : changes.getAllKeys()) {
+                    net.minecraft.nbt.Tag tag = changes.get(key);
+                    if (tag != null) data.put(key, tag.copy());
+                }
+
+                if (operation.has("remove_fields")) {
+                    JsonElement removeValue = operation.get("remove_fields");
+                    if (!removeValue.isJsonArray() || removeValue.getAsJsonArray().size() > 128) {
+                        throw new IllegalArgumentException("remove_fields 必须是最多 128 项的文本数组");
+                    }
+                    for (JsonElement element : removeValue.getAsJsonArray()) {
+                        if (!element.isJsonPrimitive()) {
+                            throw new IllegalArgumentException("remove_fields 只能包含文本");
+                        }
+                        String key = element.getAsString();
+                        if (key.length() > 128) throw new IllegalArgumentException("remove_fields 字段名过长");
+                        data.remove(key);
+                    }
+                }
+
+                object.readData(data);
+                object.editedFromGUIOnServer();
             }
             case "remove_quest_object" -> {
                 rejectUnknown(operation, "kind", "object_id");
@@ -639,21 +683,43 @@ public final class FTBQ2001ProposalExecutor {
         }
     }
 
-    private static void validatePolicy(JsonObject operation, String kind, boolean allowCommandRewards) {
+    private static void validatePolicy(ServerQuestFile file, JsonObject operation,
+                                       String kind, boolean allowCommandRewards) {
         if (allowCommandRewards) return;
-        if (!"add_typed_quest_object".equals(kind) && !"upsert_quest_object_raw".equals(kind)) return;
 
-        String objectKind = requiredString(operation, "object_kind", 16);
-        if (!"reward".equals(objectKind)) return;
+        String typeId = "";
+        if ("add_typed_quest_object".equals(kind)) {
+            String objectKind = requiredString(operation, "object_kind", 16);
+            if (!"reward".equals(objectKind)) return;
+            typeId = requiredString(operation, "type_id", 256);
+        } else if ("upsert_quest_object_raw".equals(kind)) {
+            String objectKind = requiredString(operation, "object_kind", 16);
+            if (!"reward".equals(objectKind)) return;
+            long objectId = requiredId(operation, "object_id");
+            QuestObjectBase existing = file.getBase(objectId);
+            if (existing instanceof Reward reward) {
+                typeId = reward.getType().getTypeId().toString();
+            } else {
+                typeId = requiredString(operation, "type_id", 256);
+            }
+        } else if ("patch_quest_object".equals(kind)) {
+            QuestObjectBase existing = file.getBase(requiredId(operation, "object_id"));
+            if (!(existing instanceof Reward reward)) return;
+            typeId = reward.getType().getTypeId().toString();
+        } else {
+            return;
+        }
 
-        String typeId = requiredString(operation, "type_id", 256);
-        String normalized = typeId.indexOf(':') >= 0 ? typeId : "ftbquests:" + typeId;
-        if ("ftbquests:command".equals(normalized)) {
+        if ("ftbquests:command".equals(normalizeTypeId(typeId))) {
             throw new IllegalArgumentException(
                     "Command rewards are disabled by server policy. Set allowCommandRewards=true "
                             + "in autoftbq-mcp.json only on a trusted authoring setup."
             );
         }
+    }
+
+    private static String normalizeTypeId(String typeId) {
+        return typeId.indexOf(':') >= 0 ? typeId : "ftbquests:" + typeId;
     }
 
     private static Quest requireQuest(ServerQuestFile file, JsonObject value, String key,
