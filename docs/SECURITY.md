@@ -67,9 +67,17 @@ Changing the payload while reusing the same proposal ID is a conflict.
 
 Quest text, registry names, datapack JSON, addon metadata, and MCP client-provided strings are data, not trusted instructions.
 
-The mod does not execute game commands from arbitrary MCP text.
+The mod does not execute arbitrary MCP text as game commands.
 
-If command rewards or other execution-bearing FTBQ features are exposed by future semantic tools, they must be treated as a distinct high-risk capability.
+FTB Quests command rewards are a separate execution-bearing feature. AutoFTBQ MCP rejects creation/upsert of `ftbquests:command` rewards by default at the server transaction preflight, including the generic raw path. A trusted server owner must explicitly set:
+
+```json
+{
+  "allowCommandRewards": true
+}
+```
+
+in `config/autoftbq-mcp.json` to enable them.
 
 ## Remote mode
 
