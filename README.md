@@ -90,6 +90,26 @@ The runtime currently serves both MCP lifecycle eras on one endpoint:
 
 Remote access is disabled by default. Command rewards are also disabled by default because they can execute server commands. See [Security](docs/SECURITY.md).
 
+## Codex quick start
+
+Codex CLI and the Codex IDE extension can connect directly to the local MCP endpoint. Because the bearer token changes every Minecraft launch, use the included `http_headers_helper` instead of copying a token into Codex config.
+
+Windows:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\codex_config_snippet.ps1 -RuntimeFile "D:\\Minecraft\\Instances\\MyPack\\config\\autoftbq-mcp\\runtime.json"
+```
+
+Paste the generated block into `%USERPROFILE%\.codex\config.toml`, start Minecraft first, then open/restart Codex and verify with:
+
+```text
+codex mcp list
+```
+
+Then ask Codex to call `autoftbq.health` followed by `ftbq.get_book`.
+
+See the complete [Codex connection guide](docs/CODEX.md).
+
 ## Core tools
 
 Game knowledge:
