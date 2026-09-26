@@ -70,6 +70,24 @@ Fields:
 
 Allowed common changes are title, subtitle, and icon.
 
+### reorder_chapter_group
+
+Fields:
+
+- `group_id`
+- `new_index`
+
+`new_index` is zero-based among non-default groups. The default group is fixed.
+
+### reorder_chapter
+
+Fields:
+
+- `chapter_id`
+- `new_index`
+
+`new_index` is zero-based inside the chapter's current group.
+
 ### move_chapter_to_group
 
 Fields:
