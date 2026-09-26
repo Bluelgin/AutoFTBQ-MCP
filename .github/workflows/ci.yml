@@ -22,5 +22,7 @@ jobs:
           cache: gradle
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v5
+      - name: Check architecture boundaries
+        run: python scripts/check-architecture.py
       - name: Build
         run: ./gradlew build --stacktrace
