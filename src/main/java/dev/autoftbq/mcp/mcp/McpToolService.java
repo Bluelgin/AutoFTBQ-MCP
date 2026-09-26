@@ -7,8 +7,6 @@ import com.google.gson.JsonParser;
 import dev.autoftbq.mcp.client.ClientThread;
 import dev.autoftbq.mcp.compat.CompatibilityManager;
 import dev.autoftbq.mcp.compat.ftbq.FtbqClientAdapter;
-import dev.autoftbq.mcp.compat.ftbq.v2001.GameDataCatalog;
-import dev.autoftbq.mcp.forge.network.ForgeMcpNetwork;
 import dev.autoftbq.mcp.platform.GamePlatform;
 import dev.autoftbq.mcp.platform.ProposalApplicationResult;
 import dev.autoftbq.mcp.platform.ProposalUndoResult;
