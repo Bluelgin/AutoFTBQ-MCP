@@ -99,6 +99,7 @@ public final class FTBQ2001ReadService {
             JsonObject g = new JsonObject();
             g.addProperty("id", group.getCodeString());
             g.addProperty("title", group.getTitle().getString());
+            g.addProperty("default_group", group.isDefaultGroup());
             JsonArray chapters = new JsonArray();
             group.getChapters().forEach(chapter -> {
                 JsonObject c = new JsonObject();
@@ -111,6 +112,20 @@ public final class FTBQ2001ReadService {
             groups.add(g);
         });
         root.add("chapter_groups", groups);
+
+        JsonArray rewardTables = new JsonArray();
+        ClientQuestFile.INSTANCE.getRewardTables().forEach(table -> {
+            JsonObject value = new JsonObject();
+            value.addProperty("id", table.getCodeString());
+            value.addProperty("title", table.getTitle().getString());
+            value.addProperty("filename", table.getFilename());
+            value.addProperty("reward_count", table.getWeightedRewards().size());
+            CompoundTag data = new CompoundTag();
+            table.writeData(data);
+            value.addProperty("data_snbt", data.toString());
+            rewardTables.add(value);
+        });
+        root.add("reward_tables", rewardTables);
         return root;
     }
 
