@@ -9,6 +9,8 @@ public record ToolDefinition(String name, String description, JsonObject inputSc
             "ftbq.remove_quest_object",
             "ftbq.delete_quest",
             "ftbq.delete_chapter",
+            "ftbq.delete_chapter_group",
+            "ftbq.delete_reward_table",
             "ftbq.apply_operations",
             "ftbq.undo_last",
             "ftbq.transaction_commit"
