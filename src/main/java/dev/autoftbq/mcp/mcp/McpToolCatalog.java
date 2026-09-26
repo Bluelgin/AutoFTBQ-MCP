@@ -177,6 +177,14 @@ public final class McpToolCatalog {
                         p("amount", integer("For xp/xp_levels reward")),
                         p("data_snbt", str("Raw SNBT for arbitrary registered reward types"))
                 )), List.of("expected_revision", "quest_id", "type_id")));
+        tools.add(tool("ftbq.update_quest_object",
+                "Patch an existing task or reward in place without changing its id or type. Read ftbq.get_object first; changes_snbt is merged onto current data and remove_fields deletes selected keys.",
+                merge(writeBase, obj(
+                        p("object_id", str("Existing task or reward id")),
+                        p("changes_snbt", str("Compound SNBT containing only fields to replace or add")),
+                        p("remove_fields", array(str("Existing SNBT field names to remove")))
+                )), List.of("expected_revision", "object_id")));
+
         tools.add(tool("ftbq.move_quest_object",
                 "Reorder one task or reward to an exact zero-based index in its quest.",
                 merge(writeBase, obj(
