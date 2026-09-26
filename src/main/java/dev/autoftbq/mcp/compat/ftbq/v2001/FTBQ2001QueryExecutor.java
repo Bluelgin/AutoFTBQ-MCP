@@ -3,6 +3,7 @@ package dev.autoftbq.mcp.compat.ftbq.v2001;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import dev.ftb.mods.ftblibrary.util.KnownServerRegistries;
 import dev.ftb.mods.ftbquests.client.ClientQuestFile;
 import dev.ftb.mods.ftbquests.quest.Quest;
 import net.minecraft.client.Minecraft;
@@ -267,9 +268,10 @@ public final class FTBQ2001QueryExecutor {
                 case "biome" -> Minecraft.getInstance().level != null
                         && Minecraft.getInstance().level.registryAccess().registry(Registries.BIOME)
                         .map(value -> value.containsKey(id)).orElse(false);
-                case "structure" -> Minecraft.getInstance().level != null
-                        && Minecraft.getInstance().level.registryAccess().registry(Registries.STRUCTURE)
-                        .map(value -> value.containsKey(id)).orElse(false);
+                case "dimension" -> KnownServerRegistries.client != null
+                        && KnownServerRegistries.client.dimensions.contains(id);
+                case "advancement" -> KnownServerRegistries.client != null
+                        && KnownServerRegistries.client.advancements.containsKey(id);
                 default -> false;
             };
             JsonObject value = new JsonObject();
@@ -281,6 +283,11 @@ public final class FTBQ2001QueryExecutor {
                     case "block" -> BuiltInRegistries.BLOCK.get(id).getName().getString();
                     case "entity", "entity_type" -> BuiltInRegistries.ENTITY_TYPE.get(id).getDescription().getString();
                     case "mob_effect" -> BuiltInRegistries.MOB_EFFECT.get(id).getDisplayName().getString();
+                    case "advancement" -> {
+                        KnownServerRegistries.AdvancementInfo info = KnownServerRegistries.client == null
+                                ? null : KnownServerRegistries.client.advancements.get(id);
+                        yield info != null && info.name != null ? info.name.getString() : id.toString();
+                    }
                     default -> id.toString();
                 };
                 value.addProperty("name", name);
@@ -288,7 +295,7 @@ public final class FTBQ2001QueryExecutor {
             results.add(value);
         }
         if (!java.util.Set.of("item", "block", "entity", "entity_type", "fluid",
-                "mob_effect", "stat", "custom_stat", "biome", "structure").contains(registry)) {
+                "mob_effect", "stat", "custom_stat", "biome", "dimension", "advancement").contains(registry)) {
             return error("当前适配器不支持该 registry 的精确 ID 校验");
         }
         JsonObject response = new JsonObject();
