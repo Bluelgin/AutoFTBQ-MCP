@@ -41,7 +41,7 @@ public final class McpToolService {
             case "ftbq.get_object" -> client(() -> adapter().object(required(arguments, "id")));
             case "ftbq.list_task_types" -> client(() -> adapter().listTypes("task"));
             case "ftbq.list_reward_types" -> client(() -> adapter().listTypes("reward"));
-            case "ftbq.get_type_schema" -> client(() -> adapter().typeSchema(required(arguments, "kind"), required(args, "type_id")));
+            case "ftbq.get_type_schema" -> client(() -> adapter().typeSchema(required(arguments, "kind"), required(arguments, "type_id")));
 
             case "ftbq.create_chapter" -> commitSingle(arguments, createChapter(arguments));
             case "ftbq.create_quest" -> commitSingle(arguments, createQuest(arguments));
