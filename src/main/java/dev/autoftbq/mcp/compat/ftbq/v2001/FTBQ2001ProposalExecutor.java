@@ -491,6 +491,40 @@ public final class FTBQ2001ProposalExecutor {
                 }
                 chapter.editedFromGUIOnServer();
             }
+            case "reorder_chapter_group" -> {
+                rejectUnknown(operation, "kind", "group_id", "new_index");
+                ChapterGroup group = requireChapterGroup(file, operation, "group_id", temporaryIds);
+                if (group.isDefaultGroup()) {
+                    throw new IllegalArgumentException("默认章节组不能重排");
+                }
+                int newIndex = requiredNonNegativeInt(operation, "new_index");
+                int nonDefaultCount = Math.max(0, file.getChapterGroups().size() - 1);
+                if (newIndex >= nonDefaultCount) {
+                    throw new IllegalArgumentException("new_index 超出章节组范围");
+                }
+                int targetActualIndex = newIndex + 1;
+                int guard = file.getChapterGroups().size() + 1;
+                while (file.getChapterGroups().indexOf(group) != targetActualIndex && guard-- > 0) {
+                    int current = file.getChapterGroups().indexOf(group);
+                    boolean moved = file.moveChapterGroup(group.getId(), targetActualIndex < current);
+                    if (!moved) throw new IllegalArgumentException("无法移动章节组到目标位置");
+                }
+            }
+            case "reorder_chapter" -> {
+                rejectUnknown(operation, "kind", "chapter_id", "new_index");
+                Chapter chapter = requireChapter(file, operation, "chapter_id", temporaryIds);
+                ChapterGroup group = chapter.getGroup();
+                int newIndex = requiredNonNegativeInt(operation, "new_index");
+                if (newIndex >= group.getChapters().size()) {
+                    throw new IllegalArgumentException("new_index 超出章节范围");
+                }
+                int guard = group.getChapters().size() + 1;
+                while (group.getChapters().indexOf(chapter) != newIndex && guard-- > 0) {
+                    int current = group.getChapters().indexOf(chapter);
+                    boolean moved = group.moveChapterWithinGroup(chapter, newIndex < current);
+                    if (!moved) throw new IllegalArgumentException("无法移动章节到目标位置");
+                }
+            }
             case "move_chapter_to_group" -> {
                 rejectUnknown(operation, "kind", "chapter_id", "group_id");
                 Chapter chapter = requireChapter(file, operation, "chapter_id", temporaryIds);
