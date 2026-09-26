@@ -29,6 +29,7 @@ import io.netty.buffer.Unpooled;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
@@ -36,7 +37,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -317,6 +320,7 @@ public final class FTBQ2001ProposalExecutor {
                     chapter = (Chapter) file.create(id, QuestObjectType.CHAPTER, 0L, extra);
                     if (chapter == null) throw new IllegalArgumentException("无法创建章节：" + id);
                 } else if (chapter.getGroup() != targetGroup) {
+                    chapter.getGroup().removeChapter(chapter);
                     targetGroup.addChapter(chapter);
                 }
                 chapter.readData(data);
@@ -405,12 +409,112 @@ public final class FTBQ2001ProposalExecutor {
                 chapter.deleteChildren();
                 chapter.deleteSelf();
             }
-            case "create_chapter" -> {
-                rejectUnknown(operation, "kind", "temp_id", "title", "subtitle", "icon");
+            case "create_chapter_group" -> {
+                rejectUnknown(operation, "kind", "temp_id", "title");
                 String temporary = uniqueTemporary(operation, temporaryIds);
                 long id = file.newID();
+                ChapterGroup group = (ChapterGroup) file.create(
+                        id, QuestObjectType.CHAPTER_GROUP, 0L, new CompoundTag());
+                if (group == null) throw new IllegalArgumentException("无法创建章节组");
+                group.setRawTitle(requiredString(operation, "title", 4000));
+                group.onCreated();
+                temporaryIds.put(temporary, id);
+            }
+            case "create_reward_table" -> {
+                rejectUnknown(operation, "kind", "temp_id", "title");
+                String temporary = uniqueTemporary(operation, temporaryIds);
+                long id = file.newID();
+                RewardTable table = (RewardTable) file.create(
+                        id, QuestObjectType.REWARD_TABLE, 0L, new CompoundTag());
+                if (table == null) throw new IllegalArgumentException("无法创建奖励表");
+                table.setRawTitle(optionalString(operation, "title", 4000));
+                table.onCreated();
+                temporaryIds.put(temporary, id);
+            }
+            case "update_chapter" -> {
+                rejectUnknown(operation, "kind", "chapter_id", "changes");
+                Chapter chapter = requireChapter(file, operation, "chapter_id", temporaryIds);
+                JsonObject changes = requiredObject(operation, "changes");
+                rejectUnknown(changes, "title", "subtitle", "icon");
+                if (changes.has("subtitle")) {
+                    replaceChapterSubtitle(chapter, changes.get("subtitle"));
+                }
+                if (changes.has("title")) {
+                    chapter.setRawTitle(requiredString(changes, "title", 4000));
+                }
+                if (changes.has("icon")) {
+                    applyIcon(chapter, optionalString(changes, "icon", 256));
+                }
+                chapter.editedFromGUIOnServer();
+            }
+            case "move_chapter_to_group" -> {
+                rejectUnknown(operation, "kind", "chapter_id", "group_id");
+                Chapter chapter = requireChapter(file, operation, "chapter_id", temporaryIds);
+                ChapterGroup target = requireChapterGroup(file, operation, "group_id", temporaryIds);
+                if (chapter.getGroup() != target) {
+                    chapter.getGroup().removeChapter(chapter);
+                    target.addChapter(chapter);
+                    chapter.editedFromGUIOnServer();
+                }
+            }
+            case "move_quest" -> {
+                rejectUnknown(operation, "kind", "quest_id", "chapter_id", "x", "y");
+                Quest quest = requireQuest(file, operation, "quest_id", temporaryIds);
+                Chapter target = operation.has("chapter_id")
+                        ? requireChapter(file, operation, "chapter_id", temporaryIds)
+                        : quest.getChapter();
+                double x = operation.has("x") ? requiredFinite(operation, "x") : quest.getX();
+                double y = operation.has("y") ? requiredFinite(operation, "y") : quest.getY();
+                quest.onMoved(x, y, target.getId());
+                quest.editedFromGUIOnServer();
+            }
+            case "remove_dependency" -> {
+                rejectUnknown(operation, "kind", "quest_id", "dependency_id");
+                Quest quest = requireQuest(file, operation, "quest_id", temporaryIds);
+                Quest dependency = requireQuest(file, operation, "dependency_id", temporaryIds);
+                boolean present = quest.streamDependencies().anyMatch(value -> value == dependency);
+                if (!present) throw new IllegalArgumentException("任务之间不存在该依赖");
+                quest.removeDependency(dependency);
+                quest.editedFromGUIOnServer();
+            }
+            case "move_quest_object" -> {
+                rejectUnknown(operation, "kind", "quest_id", "object_kind", "object_id", "new_index");
+                Quest quest = requireQuest(file, operation, "quest_id", temporaryIds);
+                QuestObjectBase object = file.getBase(requiredId(operation, "object_id"));
+                String objectKind = requiredString(operation, "object_kind", 16);
+                int newIndex = requiredNonNegativeInt(operation, "new_index");
+                if ("task".equals(objectKind)) {
+                    if (!(object instanceof Task task) || task.getQuest() != quest) {
+                        throw new IllegalArgumentException("任务条件不属于指定 quest");
+                    }
+                    List<Task> values = new ArrayList<>(quest.getTasks());
+                    values.remove(task);
+                    if (newIndex > values.size()) throw new IllegalArgumentException("new_index 超出 task 列表范围");
+                    values.add(newIndex, task);
+                    quest.setTaskList(values);
+                } else if ("reward".equals(objectKind)) {
+                    if (!(object instanceof Reward reward) || reward.getQuest() != quest) {
+                        throw new IllegalArgumentException("奖励不属于指定 quest");
+                    }
+                    List<Reward> values = new ArrayList<>(quest.getRewards());
+                    values.remove(reward);
+                    if (newIndex > values.size()) throw new IllegalArgumentException("new_index 超出 reward 列表范围");
+                    values.add(newIndex, reward);
+                    quest.setRewardList(values);
+                } else {
+                    throw new IllegalArgumentException("object_kind 必须是 task 或 reward");
+                }
+                quest.editedFromGUIOnServer();
+            }
+            case "create_chapter" -> {
+                rejectUnknown(operation, "kind", "temp_id", "title", "subtitle", "icon", "group_id");
+                String temporary = uniqueTemporary(operation, temporaryIds);
+                ChapterGroup targetGroup = operation.has("group_id")
+                        ? requireChapterGroup(file, operation, "group_id", temporaryIds)
+                        : file.getDefaultChapterGroup();
+                long id = file.newID();
                 CompoundTag extra = new CompoundTag();
-                extra.putLong("group", 0L);
+                extra.putLong("group", targetGroup.getId());
                 Chapter chapter = (Chapter) file.create(id, QuestObjectType.CHAPTER, 0L, extra);
                 chapter.setRawTitle(requiredString(operation, "title", 4000));
                 if (operation.has("subtitle")) {
@@ -568,6 +672,14 @@ public final class FTBQ2001ProposalExecutor {
         return chapter;
     }
 
+    private static ChapterGroup requireChapterGroup(ServerQuestFile file, JsonObject value, String key,
+                                                    Map<String, Long> temporaryIds) {
+        long id = resolveId(requiredString(value, key, 256), temporaryIds);
+        ChapterGroup group = file.getChapterGroup(id);
+        if (group == null) throw new IllegalArgumentException("找不到章节组：" + value.get(key));
+        return group;
+    }
+
     private static long resolveId(String value, Map<String, Long> temporaryIds) {
         Long temporary = temporaryIds.get(value);
         if (temporary != null) return temporary;
@@ -640,6 +752,48 @@ public final class FTBQ2001ProposalExecutor {
         }
         quest.getRawDescription().clear();
         quest.getRawDescription().addAll(lines);
+    }
+
+    private static void replaceChapterSubtitle(Chapter chapter, JsonElement value) {
+        List<String> lines = new ArrayList<>();
+        if (value.isJsonPrimitive()) {
+            String line = value.getAsString();
+            if (line.length() > 4000) throw new IllegalArgumentException("subtitle 过长");
+            if (!line.isBlank()) lines.add(line);
+        } else if (value.isJsonArray()) {
+            if (value.getAsJsonArray().size() > 64) {
+                throw new IllegalArgumentException("subtitle 最多 64 段");
+            }
+            for (JsonElement element : value.getAsJsonArray()) {
+                if (!element.isJsonPrimitive()) throw new IllegalArgumentException("subtitle 只能包含文本");
+                String line = element.getAsString();
+                if (line.length() > 4000) throw new IllegalArgumentException("subtitle 段落过长");
+                lines.add(line);
+            }
+        } else {
+            throw new IllegalArgumentException("subtitle 必须是文本或文本数组");
+        }
+
+        CompoundTag data = new CompoundTag();
+        chapter.writeData(data);
+        data.remove("subtitle");
+        if (!lines.isEmpty()) {
+            ListTag list = new ListTag();
+            lines.forEach(line -> list.add(StringTag.valueOf(line)));
+            data.put("subtitle", list);
+        }
+        chapter.readData(data);
+    }
+
+    private static int requiredNonNegativeInt(JsonObject value, String key) {
+        if (!value.has(key) || !value.get(key).isJsonPrimitive()) {
+            throw new IllegalArgumentException("缺少 " + key);
+        }
+        int number = value.get(key).getAsInt();
+        if (number < 0 || number > 100_000) {
+            throw new IllegalArgumentException(key + " 超出范围");
+        }
+        return number;
     }
 
     private static double requiredFinite(JsonObject value, String key) {
