@@ -20,7 +20,7 @@ public final class McpToolCatalog {
                 "Describe live game-data coverage and explicit unknown areas. Call this before claiming complete modpack coverage.",
                 obj(), List.of()));
         tools.add(tool("minecraft.search_registry",
-                "Search a live Minecraft registry page without guessing ids. Supports item, block, entity, fluid, recipe_type and adapter-supported dynamic registries.",
+                "Search live Minecraft/FTB-synchronized registry data without guessing ids. Current 2001 adapter covers item, block, entity, fluid, mob_effect, stat, recipe_type, biome, structure, dimension and advancement.",
                 obj(
                         p("registry", str("Registry kind")),
                         p("query", str("Case-insensitive id substring")),
@@ -30,9 +30,9 @@ public final class McpToolCatalog {
                         p("data_version", str("Optional version from an earlier page"))
                 ), List.of("registry")));
         tools.add(tool("minecraft.validate_ids",
-                "Validate exact registry ids against the live game. Core 2001 adapter currently guarantees item, block and entity validation.",
+                "Validate exact registry ids against the live game or authoritative server adapter. Current 2001 coverage includes item, block, entity, fluid, mob_effect, stat, biome, structure, dimension and advancement.",
                 obj(
-                        p("registry", str("item, block or entity")),
+                        p("registry", str("Registry kind supported by minecraft.capabilities")),
                         p("ids", array(str("Exact resource ids")))
                 ), List.of("registry", "ids")));
         tools.add(tool("minecraft.inspect_item",
@@ -91,10 +91,24 @@ public final class McpToolCatalog {
                 p("proposal_id", str("Optional idempotency key; generate a stable UUID when retrying the same write"))
         );
 
+        tools.add(tool("ftbq.create_chapter_group",
+                "Create one chapter group. The returned temporary-id map can be used by a low-level atomic batch.",
+                merge(writeBase, obj(
+                        p("temp_id", str("Optional temporary id")),
+                        p("title", str("Chapter-group title"))
+                )), List.of("expected_revision", "title")));
+        tools.add(tool("ftbq.create_reward_table",
+                "Create one independent FTB Quests reward table.",
+                merge(writeBase, obj(
+                        p("temp_id", str("Optional temporary id")),
+                        p("title", str("Optional reward-table title"))
+                )), List.of("expected_revision")));
+
         tools.add(tool("ftbq.create_chapter",
                 "Create one chapter as an immediately committed, rollback-safe server transaction.",
                 merge(writeBase, obj(
                         p("temp_id", str("Optional temporary id for references inside this same batch")),
+                        p("group_id", str("Optional chapter-group id; defaults to the default group")),
                         p("title", str("Chapter title")),
                         p("subtitle", str("Optional subtitle")),
                         p("icon", str("Optional item id icon"))
@@ -111,12 +125,34 @@ public final class McpToolCatalog {
                         p("x", number("Quest x coordinate")),
                         p("y", number("Quest y coordinate"))
                 )), List.of("expected_revision", "chapter_id", "title", "x", "y")));
+        tools.add(tool("ftbq.update_chapter",
+                "Patch common chapter fields while preserving quests and other chapter data.",
+                merge(writeBase, obj(
+                        p("chapter_id", str("Chapter id")),
+                        p("changes", objectAny("Allowed keys: title, subtitle, icon"))
+                )), List.of("expected_revision", "chapter_id", "changes")));
+        tools.add(tool("ftbq.move_chapter_to_group",
+                "Move a chapter between chapter groups without changing its id or quests.",
+                merge(writeBase, obj(
+                        p("chapter_id", str("Chapter id")),
+                        p("group_id", str("Target chapter-group id"))
+                )), List.of("expected_revision", "chapter_id", "group_id")));
+
         tools.add(tool("ftbq.update_quest",
                 "Patch safe common quest fields. The server rejects stale revisions and rolls back the whole operation on failure.",
                 merge(writeBase, obj(
                         p("quest_id", str("Quest id")),
                         p("changes", objectAny("Allowed keys: title, subtitle, description, icon, x, y"))
                 )), List.of("expected_revision", "quest_id", "changes")));
+        tools.add(tool("ftbq.move_quest",
+                "Move an existing quest to another chapter and/or exact canvas coordinates while preserving its id, tasks and rewards.",
+                merge(writeBase, obj(
+                        p("quest_id", str("Quest id")),
+                        p("chapter_id", str("Optional target chapter id")),
+                        p("x", number("Optional x coordinate")),
+                        p("y", number("Optional y coordinate"))
+                )), List.of("expected_revision", "quest_id")));
+
         tools.add(tool("ftbq.add_task",
                 "Add a task. Official item/checkmark/xp helpers accept semantic fields; any runtime task type can be added with data_snbt.",
                 merge(writeBase, obj(
@@ -137,6 +173,15 @@ public final class McpToolCatalog {
                         p("amount", integer("For xp/xp_levels reward")),
                         p("data_snbt", str("Raw SNBT for arbitrary registered reward types"))
                 )), List.of("expected_revision", "quest_id", "type_id")));
+        tools.add(tool("ftbq.move_quest_object",
+                "Reorder one task or reward to an exact zero-based index in its quest.",
+                merge(writeBase, obj(
+                        p("quest_id", str("Owning quest id")),
+                        p("object_kind", str("task or reward")),
+                        p("object_id", str("Task or reward id")),
+                        p("new_index", integer("Exact zero-based destination index"))
+                )), List.of("expected_revision", "quest_id", "object_kind", "object_id", "new_index")));
+
         tools.add(tool("ftbq.remove_quest_object",
                 "Remove one task or reward inside a rollback-safe transaction.",
                 merge(writeBase, obj(p("object_id", str("Task or reward id")))),
@@ -149,12 +194,28 @@ public final class McpToolCatalog {
                 "Delete one chapter and its children inside a rollback-safe transaction.",
                 merge(writeBase, obj(p("chapter_id", str("Chapter id")))),
                 List.of("expected_revision", "chapter_id")));
+        tools.add(tool("ftbq.delete_chapter_group",
+                "Delete a non-default chapter group. FTBQ moves its chapters back to the default group.",
+                merge(writeBase, obj(p("group_id", str("Chapter-group id")))),
+                List.of("expected_revision", "group_id")));
+        tools.add(tool("ftbq.delete_reward_table",
+                "Delete one independent reward table inside the same rollback-safe transaction system.",
+                merge(writeBase, obj(p("reward_table_id", str("Reward-table id")))),
+                List.of("expected_revision", "reward_table_id")));
+
         tools.add(tool("ftbq.connect_quests",
                 "Make quest_id depend on dependency_id.",
                 merge(writeBase, obj(
                         p("quest_id", str("Dependent quest id")),
                         p("dependency_id", str("Prerequisite quest id"))
                 )), List.of("expected_revision", "quest_id", "dependency_id")));
+        tools.add(tool("ftbq.disconnect_quests",
+                "Remove one prerequisite edge between two quests.",
+                merge(writeBase, obj(
+                        p("quest_id", str("Dependent quest id")),
+                        p("dependency_id", str("Prerequisite quest id"))
+                )), List.of("expected_revision", "quest_id", "dependency_id")));
+
         tools.add(tool("ftbq.apply_dependency_plan",
                 "Atomically apply up to 40 dependency edges.",
                 merge(writeBase, obj(p("edges", array(objectAny("Each edge has quest_id and dependency_id"))))),
