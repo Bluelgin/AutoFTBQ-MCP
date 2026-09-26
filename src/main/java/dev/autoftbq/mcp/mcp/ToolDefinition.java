@@ -39,6 +39,7 @@ public record ToolDefinition(String name, String description, JsonObject inputSc
                 || name.startsWith("minecraft.")
                 || name.startsWith("ftbq.get_")
                 || name.startsWith("ftbq.list_")
+                || name.equals("ftbq.validate_book")
                 || name.equals("ftbq.transaction_status");
     }
 }
