@@ -47,6 +47,8 @@ public final class McpToolService {
             case "ftbq.create_chapter" -> commitSingle(arguments, createChapter(arguments));
             case "ftbq.create_quest" -> commitSingle(arguments, createQuest(arguments));
             case "ftbq.update_chapter" -> commitSingle(arguments, updateChapter(arguments));
+            case "ftbq.reorder_chapter_group" -> commitSingle(arguments, reorderChapterGroup(arguments));
+            case "ftbq.reorder_chapter" -> commitSingle(arguments, reorderChapter(arguments));
             case "ftbq.move_chapter_to_group" -> commitSingle(arguments, moveChapterToGroup(arguments));
             case "ftbq.update_quest" -> commitSingle(arguments, updateQuest(arguments));
             case "ftbq.move_quest" -> commitSingle(arguments, moveQuest(arguments));
@@ -202,6 +204,25 @@ public final class McpToolService {
         op.addProperty("kind", "update_chapter");
         op.addProperty("chapter_id", required(args, "chapter_id"));
         op.add("changes", requiredObject(args, "changes").deepCopy());
+        return op;
+    }
+
+    private static JsonObject reorderChapterGroup(JsonObject args) {
+        return indexedOp("reorder_chapter_group", "group_id", required(args, "group_id"), args);
+    }
+
+    private static JsonObject reorderChapter(JsonObject args) {
+        return indexedOp("reorder_chapter", "chapter_id", required(args, "chapter_id"), args);
+    }
+
+    private static JsonObject indexedOp(String kind, String idKey, String id, JsonObject args) {
+        if (!args.has("new_index")) throw new IllegalArgumentException("Missing required argument: new_index");
+        int index = args.get("new_index").getAsInt();
+        if (index < 0) throw new IllegalArgumentException("new_index must be non-negative");
+        JsonObject op = new JsonObject();
+        op.addProperty("kind", kind);
+        op.addProperty(idKey, id);
+        op.addProperty("new_index", index);
         return op;
     }
 
