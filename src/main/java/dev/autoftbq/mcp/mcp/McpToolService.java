@@ -89,21 +89,21 @@ public final class McpToolService {
     private JsonObject searchRegistry(JsonObject args) {
         String registry = optional(args, "registry").toLowerCase(java.util.Locale.ROOT);
         if ("structure".equals(registry)) {
-            JsonObject serverArgs = arguments.deepCopy();
+            JsonObject serverArgs = args.deepCopy();
             serverArgs.addProperty("request_kind", "registry_page");
             return serverData(serverArgs);
         }
-        return client(() -> GameDataCatalog.query(withKind(arguments.deepCopy(), "registry_page")));
+        return client(() -> GameDataCatalog.query(withKind(args.deepCopy(), "registry_page")));
     }
 
     private JsonObject validateIds(JsonObject args) {
         String registry = optional(args, "registry").toLowerCase(java.util.Locale.ROOT);
         if ("structure".equals(registry)) {
-            JsonObject serverArgs = arguments.deepCopy();
+            JsonObject serverArgs = args.deepCopy();
             serverArgs.addProperty("request_kind", "validate_registry_ids");
             return serverData(serverArgs);
         }
-        return client(() -> adapter().query("validate_registry_ids", arguments));
+        return client(() -> adapter().query("validate_registry_ids", args));
     }
 
     private JsonObject serverResource(JsonObject args) {
