@@ -41,7 +41,7 @@ public final class McpToolService {
             case "ftbq.get_object" -> client(() -> adapter().object(required(arguments, "id")));
             case "ftbq.list_task_types" -> client(() -> adapter().listTypes("task"));
             case "ftbq.list_reward_types" -> client(() -> adapter().listTypes("reward"));
-            case "ftbq.get_type_schema" -> client(() -> adapter().typeSchema(required(arguments, "kind"), required(arguments, "type_id")));
+            case "ftbq.get_type_schema" -> client(() -> adapter().typeSchema(required(arguments, "kind"), required(args, "type_id")));
 
             case "ftbq.create_chapter" -> commitSingle(arguments, createChapter(arguments));
             case "ftbq.create_quest" -> commitSingle(arguments, createQuest(arguments));
@@ -195,7 +195,7 @@ public final class McpToolService {
     }
 
     private static JsonObject addTask(JsonObject args) {
-        String type = normalizeType(required(arguments, "type_id"));
+        String type = normalizeType(required(args, "type_id"));
         JsonObject op = new JsonObject();
         if ("item".equals(type) && args.has("item_id")) {
             op.addProperty("kind", "add_item_task");
@@ -218,13 +218,13 @@ public final class McpToolService {
         op.addProperty("kind", "add_typed_quest_object");
         op.addProperty("quest_id", required(args, "quest_id"));
         op.addProperty("object_kind", "task");
-        op.addProperty("type_id", required(arguments, "type_id"));
+        op.addProperty("type_id", required(args, "type_id"));
         op.addProperty("data_snbt", args.has("data_snbt") ? args.get("data_snbt").getAsString() : "{}");
         return op;
     }
 
     private static JsonObject addReward(JsonObject args) {
-        String type = normalizeType(required(arguments, "type_id"));
+        String type = normalizeType(required(args, "type_id"));
         JsonObject op = new JsonObject();
         if ("item".equals(type) && args.has("item_id")) {
             op.addProperty("kind", "add_item_reward");
@@ -242,7 +242,7 @@ public final class McpToolService {
         op.addProperty("kind", "add_typed_quest_object");
         op.addProperty("quest_id", required(args, "quest_id"));
         op.addProperty("object_kind", "reward");
-        op.addProperty("type_id", required(arguments, "type_id"));
+        op.addProperty("type_id", required(args, "type_id"));
         op.addProperty("data_snbt", args.has("data_snbt") ? args.get("data_snbt").getAsString() : "{}");
         return op;
     }
