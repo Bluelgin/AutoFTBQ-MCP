@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import dev.autoftbq.mcp.config.McpConfig;
 import dev.ftb.mods.ftbquests.net.SyncQuestsMessage;
 import dev.ftb.mods.ftbquests.net.SyncEditorPermissionMessage;
 import dev.ftb.mods.ftbquests.integration.PermissionsHelper;
@@ -91,7 +92,8 @@ public final class FTBQ2001ProposalExecutor {
             return Result.failure("failed", "提案操作数量超出范围");
         }
 
-        // Parse the entire batch before touching the live quest book.
+        // Parse and policy-check the entire batch before touching the live quest book.
+        boolean allowCommandRewards = McpConfig.load().allowCommandRewards();
         try {
             for (int i = 0; i < operations.size(); i++) {
                 try {
@@ -99,6 +101,7 @@ public final class FTBQ2001ProposalExecutor {
                     if (!element.isJsonObject()) throw new IllegalArgumentException("提案操作必须是对象");
                     JsonObject operation = element.getAsJsonObject();
                     String kind = requiredString(operation, "kind", 64);
+                    validatePolicy(operation, kind, allowCommandRewards);
                     if (kind.endsWith("_raw") || operation.has("data_snbt")) {
                         requiredSnbt(operation, "data_snbt");
                     }
@@ -529,6 +532,23 @@ public final class FTBQ2001ProposalExecutor {
                 reward.onCreated();
             }
             default -> throw new IllegalArgumentException("不支持的提案操作：" + kind);
+        }
+    }
+
+    private static void validatePolicy(JsonObject operation, String kind, boolean allowCommandRewards) {
+        if (allowCommandRewards) return;
+        if (!"add_typed_quest_object".equals(kind) && !"upsert_quest_object_raw".equals(kind)) return;
+
+        String objectKind = requiredString(operation, "object_kind", 16);
+        if (!"reward".equals(objectKind)) return;
+
+        String typeId = requiredString(operation, "type_id", 256);
+        String normalized = typeId.indexOf(':') >= 0 ? typeId : "ftbquests:" + typeId;
+        if ("ftbquests:command".equals(normalized)) {
+            throw new IllegalArgumentException(
+                    "Command rewards are disabled by server policy. Set allowCommandRewards=true "
+                            + "in autoftbq-mcp.json only on a trusted authoring setup."
+            );
         }
     }
 
