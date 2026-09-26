@@ -19,6 +19,10 @@ Credentials are written to:
 
 Treat that file like a local secret.
 
+On POSIX filesystems the runtime directory is tightened to owner-only `700` and the credential file to `600` when the filesystem supports POSIX permissions. The credential is written through a temporary file and atomic replacement when available.
+
+The runtime credential file is removed when MCP is disabled, when the MCP runtime is stopped normally, and by a JVM shutdown hook. A crash can still leave a stale file behind, but its per-launch token is no longer accepted by a future runtime.
+
 ## Minecraft authority
 
 Possessing the MCP bearer token is not enough to edit a multiplayer quest book.
@@ -84,5 +88,7 @@ in `config/autoftbq-mcp.json` to enable them.
 `allowRemote=true` exists for advanced deployments but should not be treated as Internet-safe authentication.
 
 The current bearer-token transport is intended primarily for loopback or a separately secured trusted tunnel/network.
+
+Command rewards are a separate high-risk capability. They are denied by default for generic typed creation, raw upsert, and in-place object patching unless the server owner explicitly enables `allowCommandRewards`. Raw updates are also forbidden from lying about the type of an existing task/reward.
 
 Do not expose the port directly to the public Internet.
