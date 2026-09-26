@@ -27,11 +27,11 @@ public final class McpToolService {
         final JsonObject arguments = args == null ? new JsonObject() : args;
         return switch (name) {
             case "autoftbq.health" -> health();
-            case "minecraft.capabilities" -> client(() -> GameDataCatalog.query(withKind(new JsonObject(), "capabilities")));
+            case "minecraft.capabilities" -> client(() -> adapter().query("inspect_game_data", withKind(new JsonObject(), "capabilities")));
             case "minecraft.search_registry" -> searchRegistry(arguments);
             case "minecraft.validate_ids" -> validateIds(arguments);
-            case "minecraft.inspect_item" -> client(() -> GameDataCatalog.query(withKind(arguments.deepCopy(), "item_evidence")));
-            case "minecraft.search_recipes" -> client(() -> GameDataCatalog.query(withKind(arguments.deepCopy(), "recipes")));
+            case "minecraft.inspect_item" -> client(() -> adapter().query("inspect_game_data", withKind(arguments.deepCopy(), "item_evidence")));
+            case "minecraft.search_recipes" -> client(() -> adapter().query("inspect_game_data", withKind(arguments.deepCopy(), "recipes")));
             case "minecraft.inspect_resource" -> serverResource(arguments);
 
             case "ftbq.get_context" -> client(() -> adapter().context());
@@ -93,7 +93,7 @@ public final class McpToolService {
             serverArgs.addProperty("request_kind", "registry_page");
             return serverData(serverArgs);
         }
-        return client(() -> GameDataCatalog.query(withKind(args.deepCopy(), "registry_page")));
+        return client(() -> adapter().query("inspect_game_data", withKind(args.deepCopy(), "registry_page")));
     }
 
     private JsonObject validateIds(JsonObject args) {
@@ -112,7 +112,7 @@ public final class McpToolService {
 
     private JsonObject serverData(JsonObject args) {
         try {
-            String raw = awaitServer(() -> ForgeMcpNetwork.queryData(args.toString()), 10);
+            String raw = awaitServer(() -> GamePlatform.serverGateway().queryData(args.toString()), 10);
             return JsonParser.parseString(raw).getAsJsonObject();
         } catch (Exception error) {
             return error("unavailable", safe(error));
