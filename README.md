@@ -111,19 +111,19 @@ FTB Quests reads:
 - `ftbq.list_task_types`
 - `ftbq.list_reward_types`
 - `ftbq.get_type_schema`
+- `ftbq.validate_book`
 
 Safe authoring:
 
-- `ftbq.create_chapter`
-- `ftbq.create_quest`
-- `ftbq.update_quest`
-- `ftbq.add_task`
-- `ftbq.add_reward`
-- `ftbq.remove_quest_object`
-- `ftbq.delete_quest`
-- `ftbq.delete_chapter`
-- `ftbq.connect_quests`
+- `ftbq.create_chapter_group` / `ftbq.delete_chapter_group`
+- `ftbq.create_reward_table` / `ftbq.delete_reward_table`
+- `ftbq.create_chapter` / `ftbq.update_chapter` / `ftbq.move_chapter_to_group`
+- `ftbq.create_quest` / `ftbq.update_quest` / `ftbq.move_quest`
+- `ftbq.add_task` / `ftbq.add_reward`
+- `ftbq.update_quest_object` / `ftbq.move_quest_object` / `ftbq.remove_quest_object`
+- `ftbq.connect_quests` / `ftbq.disconnect_quests`
 - `ftbq.apply_dependency_plan`
+- `ftbq.delete_quest` / `ftbq.delete_chapter`
 - `ftbq.apply_operations`
 - `ftbq.undo_last`
 
@@ -199,13 +199,11 @@ gradlew.bat build
 
 Output is under `build/libs/`.
 
-With Minecraft running, a protocol/tool smoke test can read the generated runtime credential file directly:
+For a running-game transport check, use the zero-dependency [runtime smoke test](docs/SMOKE_TEST.md):
 
 ```bash
-python scripts/mcp-smoke.py /path/to/instance/config/autoftbq-mcp/runtime.json
+python tools/mcp_smoke.py --runtime /path/to/instance/config/autoftbq-mcp/runtime.json --call-health-tool
 ```
-
-For a running-game transport check, use the zero-dependency [runtime smoke test](docs/SMOKE_TEST.md).
 
 ## Status
 
