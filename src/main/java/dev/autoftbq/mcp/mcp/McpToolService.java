@@ -41,15 +41,24 @@ public final class McpToolService {
             case "ftbq.list_reward_types" -> client(() -> adapter().listTypes("reward"));
             case "ftbq.get_type_schema" -> client(() -> adapter().typeSchema(required(arguments, "kind"), required(arguments, "type_id")));
 
+            case "ftbq.create_chapter_group" -> commitSingle(arguments, createChapterGroup(arguments));
+            case "ftbq.create_reward_table" -> commitSingle(arguments, createRewardTable(arguments));
             case "ftbq.create_chapter" -> commitSingle(arguments, createChapter(arguments));
             case "ftbq.create_quest" -> commitSingle(arguments, createQuest(arguments));
+            case "ftbq.update_chapter" -> commitSingle(arguments, updateChapter(arguments));
+            case "ftbq.move_chapter_to_group" -> commitSingle(arguments, moveChapterToGroup(arguments));
             case "ftbq.update_quest" -> commitSingle(arguments, updateQuest(arguments));
+            case "ftbq.move_quest" -> commitSingle(arguments, moveQuest(arguments));
             case "ftbq.add_task" -> commitSingle(arguments, addTask(arguments));
             case "ftbq.add_reward" -> commitSingle(arguments, addReward(arguments));
+            case "ftbq.move_quest_object" -> commitSingle(arguments, moveQuestObject(arguments));
             case "ftbq.remove_quest_object" -> commitSingle(arguments, op("remove_quest_object", "object_id", required(arguments, "object_id")));
             case "ftbq.delete_quest" -> commitSingle(arguments, op("delete_quest", "quest_id", required(arguments, "quest_id")));
             case "ftbq.delete_chapter" -> commitSingle(arguments, op("delete_chapter", "chapter_id", required(arguments, "chapter_id")));
+            case "ftbq.delete_chapter_group" -> commitSingle(arguments, op("delete_chapter_group", "group_id", required(arguments, "group_id")));
+            case "ftbq.delete_reward_table" -> commitSingle(arguments, op("delete_reward_table", "reward_table_id", required(arguments, "reward_table_id")));
             case "ftbq.connect_quests" -> commitSingle(arguments, dependency(arguments));
+            case "ftbq.disconnect_quests" -> commitSingle(arguments, removeDependency(arguments));
             case "ftbq.apply_dependency_plan" -> commit(arguments, dependencyPlan(arguments));
             case "ftbq.apply_operations" -> commit(arguments, requiredArray(arguments, "operations"));
             case "ftbq.undo_last" -> undo(arguments);
@@ -166,6 +175,39 @@ public final class McpToolService {
         op.addProperty("title", required(args, "title"));
         copyString(args, op, "subtitle");
         copyString(args, op, "icon");
+        copyString(args, op, "group_id");
+        return op;
+    }
+
+    private static JsonObject createChapterGroup(JsonObject args) {
+        JsonObject op = new JsonObject();
+        op.addProperty("kind", "create_chapter_group");
+        op.addProperty("temp_id", temp(args));
+        op.addProperty("title", required(args, "title"));
+        return op;
+    }
+
+    private static JsonObject createRewardTable(JsonObject args) {
+        JsonObject op = new JsonObject();
+        op.addProperty("kind", "create_reward_table");
+        op.addProperty("temp_id", temp(args));
+        copyString(args, op, "title");
+        return op;
+    }
+
+    private static JsonObject updateChapter(JsonObject args) {
+        JsonObject op = new JsonObject();
+        op.addProperty("kind", "update_chapter");
+        op.addProperty("chapter_id", required(args, "chapter_id"));
+        op.add("changes", requiredObject(args, "changes").deepCopy());
+        return op;
+    }
+
+    private static JsonObject moveChapterToGroup(JsonObject args) {
+        JsonObject op = new JsonObject();
+        op.addProperty("kind", "move_chapter_to_group");
+        op.addProperty("chapter_id", required(args, "chapter_id"));
+        op.addProperty("group_id", required(args, "group_id"));
         return op;
     }
 
@@ -189,6 +231,19 @@ public final class McpToolService {
         op.addProperty("quest_id", required(args, "quest_id"));
         JsonObject changes = requiredObject(args, "changes");
         op.add("changes", changes.deepCopy());
+        return op;
+    }
+
+    private static JsonObject moveQuest(JsonObject args) {
+        if (!args.has("chapter_id") && !args.has("x") && !args.has("y")) {
+            throw new IllegalArgumentException("move_quest requires chapter_id, x or y");
+        }
+        JsonObject op = new JsonObject();
+        op.addProperty("kind", "move_quest");
+        op.addProperty("quest_id", required(args, "quest_id"));
+        copyString(args, op, "chapter_id");
+        if (args.has("x")) op.addProperty("x", requiredNumber(args, "x"));
+        if (args.has("y")) op.addProperty("y", requiredNumber(args, "y"));
         return op;
     }
 
@@ -242,6 +297,28 @@ public final class McpToolService {
         op.addProperty("object_kind", "reward");
         op.addProperty("type_id", required(args, "type_id"));
         op.addProperty("data_snbt", args.has("data_snbt") ? args.get("data_snbt").getAsString() : "{}");
+        return op;
+    }
+
+    private static JsonObject moveQuestObject(JsonObject args) {
+        int newIndex = args.has("new_index") ? args.get("new_index").getAsInt() : -1;
+        if (newIndex < 0) throw new IllegalArgumentException("new_index must be non-negative");
+        String objectKind = required(args, "object_kind");
+        if (!objectKind.equals("task") && !objectKind.equals("reward")) {
+            throw new IllegalArgumentException("object_kind must be task or reward");
+        }
+        JsonObject op = new JsonObject();
+        op.addProperty("kind", "move_quest_object");
+        op.addProperty("quest_id", required(args, "quest_id"));
+        op.addProperty("object_kind", objectKind);
+        op.addProperty("object_id", required(args, "object_id"));
+        op.addProperty("new_index", newIndex);
+        return op;
+    }
+
+    private static JsonObject removeDependency(JsonObject args) {
+        JsonObject op = dependency(args);
+        op.addProperty("kind", "remove_dependency");
         return op;
     }
 
