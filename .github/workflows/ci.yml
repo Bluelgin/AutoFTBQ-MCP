@@ -5,7 +5,7 @@ on:
   pull_request:
 
 jobs:
-  forge-1-20-1:
+  forge-1-20-1-ftbq-2001:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -13,7 +13,8 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: gradle/actions/setup-gradle@v5
-        with:
-          gradle-version: '8.8'
-      - run: gradle build --stacktrace
+          cache: gradle
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v5
+      - name: Build
+        run: ./gradlew build --stacktrace
