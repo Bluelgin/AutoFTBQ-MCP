@@ -5,93 +5,125 @@ import com.google.gson.JsonObject;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
+
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicLong;
 
 /** Evidence-bearing, paged client data. Unknown is never equivalent to unavailable. */
 public final class GameDataCatalog {
     private static final AtomicLong GENERATION = new AtomicLong();
-    public static void invalidate() { GENERATION.incrementAndGet(); }
-    private static String text(JsonObject a, String key) {
-        return a.has(key) ? a.get(key).getAsString() : "";
+
+    private GameDataCatalog() {}
+
+    public static void invalidate() {
+        GENERATION.incrementAndGet();
     }
+
+    private static String text(JsonObject a, String key) {
+        return a != null && a.has(key) && !a.get(key).isJsonNull() ? a.get(key).getAsString() : "";
+    }
+
     public static JsonObject query(JsonObject args) {
         try {
-            return queryInternal(args);
+            return queryInternal(args == null ? new JsonObject() : args);
         } catch (RuntimeException failure) {
             JsonObject result = new JsonObject();
             result.addProperty("schema_version", 1);
             result.addProperty("source", "minecraft_client_runtime");
             result.addProperty("status", "error");
-            result.addProperty("message", "数据查询参数无效或当前数据无法读取，请检查工具参数后重试");
+            result.addProperty("message", "Live game-data query failed; retry after the client finishes reloading.");
             return result;
         }
     }
+
     private static JsonObject queryInternal(JsonObject args) {
+        Minecraft minecraft = Minecraft.getInstance();
         JsonObject result = new JsonObject();
-        String version = Integer.toHexString(System.identityHashCode(Minecraft.getInstance().level))
+        String version = Integer.toHexString(System.identityHashCode(minecraft.level))
                 + ":" + GENERATION.get();
+
         result.addProperty("schema_version", 1);
         result.addProperty("data_version", version);
         result.addProperty("source", "minecraft_client_runtime");
         result.addProperty("coverage", "partial");
+
         String expected = text(args, "data_version");
         if (!expected.isBlank() && !expected.equals(version)) {
             result.addProperty("status", "stale_version");
-            result.addProperty("message", "数据已重载，请从第一页重新查询");
+            result.addProperty("message", "Game data reloaded; restart pagination from the first page.");
             return result;
         }
+
         String kind = text(args, "kind");
-        if (kind.equals("capabilities")) {
+        if ("capabilities".equals(kind)) {
             JsonArray supported = new JsonArray();
-            for (String entry : new String[]{"registry_page", "item_evidence", "recipes", "server_resource:loot_tables", "server_resource:advancements"}) supported.add(entry);
+            for (String entry : new String[]{
+                    "registry_page:item", "registry_page:block", "registry_page:entity",
+                    "registry_page:fluid", "registry_page:mob_effect", "registry_page:stat",
+                    "registry_page:recipe_type", "registry_page:biome", "registry_page:structure",
+                    "item_evidence", "recipes",
+                    "server_resource:loot_tables", "server_resource:advancements"
+            }) supported.add(entry);
             result.add("supported", supported);
+
             JsonArray unknown = new JsonArray();
-            for (String entry : new String[]{"runtime_loot_overrides", "trades", "scripted_drops", "custom_machine_adapters", "boss_summoning"}) unknown.add(entry);
+            for (String entry : new String[]{
+                    "survival_obtainability", "runtime_loot_overrides", "villager_trades",
+                    "scripted_drops", "custom_machine_adapters", "research_gates",
+                    "boss_summoning_rules", "modpack_disable_rules"
+            }) unknown.add(entry);
             result.add("not_covered", unknown);
             result.addProperty("status", "ok");
             return result;
         }
-        if (Minecraft.getInstance().level == null) {
+
+        if (minecraft.level == null) {
             result.addProperty("status", "unavailable");
+            result.addProperty("message", "No client world is loaded.");
             return result;
         }
-        if (kind.equals("registry_page")) {
-            Registry<?> registry = switch (text(args, "registry")) {
-                case "item" -> BuiltInRegistries.ITEM;
-                case "block" -> BuiltInRegistries.BLOCK;
-                case "entity" -> BuiltInRegistries.ENTITY_TYPE;
-                case "fluid" -> BuiltInRegistries.FLUID;
-                case "recipe_type" -> BuiltInRegistries.RECIPE_TYPE;
-                default -> null;
-            };
+
+        if ("registry_page".equals(kind)) {
+            Registry<?> registry = registry(text(args, "registry"));
             if (registry == null) {
                 result.addProperty("status", "unsupported");
+                result.addProperty("message", "This registry is not available from the current client adapter.");
                 return result;
             }
+
             int offset = Math.max(0, args.has("offset") ? args.get("offset").getAsInt() : 0);
             int limit = Math.max(1, Math.min(100, args.has("limit") ? args.get("limit").getAsInt() : 50));
             String needle = text(args, "query").toLowerCase(Locale.ROOT);
             String namespace = text(args, "namespace");
-            var ids = registry.keySet().stream().filter(id ->
-                (namespace.isBlank() || id.getNamespace().equals(namespace)) && id.toString().contains(needle)).sorted().toList();
+
+            var ids = registry.keySet().stream()
+                    .filter(id -> (namespace.isBlank() || id.getNamespace().equals(namespace))
+                            && id.toString().toLowerCase(Locale.ROOT).contains(needle))
+                    .sorted()
+                    .toList();
+
             JsonArray entries = new JsonArray();
             for (int i = offset; i < Math.min(ids.size(), offset + limit); i++) {
+                ResourceLocation id = ids.get(i);
                 JsonObject entry = new JsonObject();
-                entry.addProperty("id", ids.get(i).toString());
+                entry.addProperty("id", id.toString());
                 entry.addProperty("registered", true);
                 entries.add(entry);
             }
+
+            result.addProperty("registry", text(args, "registry"));
             result.add("entries", entries);
             result.addProperty("total", ids.size());
             result.addProperty("next_offset", Math.min(ids.size(), offset + entries.size()));
             result.addProperty("has_more", offset + entries.size() < ids.size());
-            result.addProperty("coverage", "complete_for_selected_registry");
+            result.addProperty("coverage", "complete_for_selected_registry_snapshot");
             result.addProperty("status", entries.isEmpty() ? "not_found" : "ok");
             return result;
         }
-        if (kind.equals("item_evidence")) {
+
+        if ("item_evidence".equals(kind)) {
             ResourceLocation id = ResourceLocation.tryParse(text(args, "item_id"));
             boolean exists = id != null && BuiltInRegistries.ITEM.getOptional(id).isPresent();
             result.addProperty("registered", exists);
@@ -100,31 +132,61 @@ public final class GameDataCatalog {
             result.addProperty("obtainability", "unknown");
             result.addProperty("development_complete", "unknown");
             if (!exists) return result;
+
             var item = BuiltInRegistries.ITEM.get(id);
             result.addProperty("id", id.toString());
             result.addProperty("name", item.getDescription().getString());
+
             JsonArray tags = new JsonArray();
-            item.builtInRegistryHolder().tags().limit(256).forEach(tag -> tags.add(tag.location().toString()));
+            item.builtInRegistryHolder().tags().limit(256)
+                    .forEach(tag -> tags.add(tag.location().toString()));
             result.add("tags", tags);
-            result.addProperty("tags_truncated", item.builtInRegistryHolder().tags().count() > 256);
+            result.addProperty("tags_truncated",
+                    item.builtInRegistryHolder().tags().count() > 256);
+
             try {
-                var mc = Minecraft.getInstance();
-                var model = mc.getItemRenderer().getItemModelShaper().getItemModel(item);
-                result.addProperty("render_status", model.isCustomRenderer() ? "custom_renderer_unverified"
-                        : model == mc.getModelManager().getMissingModel() ? "missing_model" : "base_model_present");
+                var model = minecraft.getItemRenderer().getItemModelShaper().getItemModel(item);
+                result.addProperty("render_status", model.isCustomRenderer()
+                        ? "custom_renderer_unverified"
+                        : model == minecraft.getModelManager().getMissingModel()
+                        ? "missing_model" : "base_model_present");
             } catch (RuntimeException error) {
                 result.addProperty("render_status", "unknown");
             }
-            result.addProperty("interpretation", "注册、基础模型和标签不是生存可获取或内容完成的证明；不要据此删除任务");
+
+            result.addProperty("interpretation",
+                    "Registration, tags and a client model do not prove survival obtainability or content completeness.");
             return result;
         }
-        if (kind.equals("recipes")) {
-            result.add("data", FTBQ2001QueryExecutor.execute("search_recipes", args));
-            result.addProperty("status", result.getAsJsonObject("data").has("error") ? "error" : "ok");
+
+        if ("recipes".equals(kind)) {
+            JsonObject data = FTBQ2001QueryExecutor.execute("search_recipes", args);
+            result.add("data", data);
+            result.addProperty("status", data.has("error") ? "error" : "ok");
             return result;
         }
+
         result.addProperty("status", "unsupported");
-        result.addProperty("message", "当前数据源没有覆盖此类信息，不能据此断定内容不存在");
+        result.addProperty("message",
+                "The current adapter does not cover this data source; absence must not be interpreted as non-existence.");
         return result;
+    }
+
+    private static Registry<?> registry(String name) {
+        Minecraft minecraft = Minecraft.getInstance();
+        return switch (name) {
+            case "item" -> BuiltInRegistries.ITEM;
+            case "block" -> BuiltInRegistries.BLOCK;
+            case "entity", "entity_type" -> BuiltInRegistries.ENTITY_TYPE;
+            case "fluid" -> BuiltInRegistries.FLUID;
+            case "mob_effect" -> BuiltInRegistries.MOB_EFFECT;
+            case "stat", "custom_stat" -> BuiltInRegistries.CUSTOM_STAT;
+            case "recipe_type" -> BuiltInRegistries.RECIPE_TYPE;
+            case "biome" -> minecraft.level == null ? null
+                    : minecraft.level.registryAccess().registry(Registries.BIOME).orElse(null);
+            case "structure" -> minecraft.level == null ? null
+                    : minecraft.level.registryAccess().registry(Registries.STRUCTURE).orElse(null);
+            default -> null;
+        };
     }
 }
