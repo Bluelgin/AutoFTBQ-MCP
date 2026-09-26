@@ -135,6 +135,19 @@ public final class McpToolCatalog {
                         p("chapter_id", str("Chapter id")),
                         p("changes", objectAny("Allowed keys: title, subtitle, icon"))
                 )), List.of("expected_revision", "chapter_id", "changes")));
+        tools.add(tool("ftbq.reorder_chapter_group",
+                "Move a non-default chapter group to an exact zero-based index among non-default groups.",
+                merge(writeBase, obj(
+                        p("group_id", str("Chapter-group id")),
+                        p("new_index", integer("Zero-based index among non-default chapter groups"))
+                )), List.of("expected_revision", "group_id", "new_index")));
+        tools.add(tool("ftbq.reorder_chapter",
+                "Move a chapter to an exact zero-based index inside its current chapter group.",
+                merge(writeBase, obj(
+                        p("chapter_id", str("Chapter id")),
+                        p("new_index", integer("Zero-based index inside the current group"))
+                )), List.of("expected_revision", "chapter_id", "new_index")));
+
         tools.add(tool("ftbq.move_chapter_to_group",
                 "Move a chapter between chapter groups without changing its id or quests.",
                 merge(writeBase, obj(
