@@ -40,6 +40,7 @@ public final class McpToolService {
             case "ftbq.list_task_types" -> client(() -> adapter().listTypes("task"));
             case "ftbq.list_reward_types" -> client(() -> adapter().listTypes("reward"));
             case "ftbq.get_type_schema" -> client(() -> adapter().typeSchema(required(arguments, "kind"), required(arguments, "type_id")));
+            case "ftbq.validate_book" -> client(() -> adapter().query("validate_book", new JsonObject()));
 
             case "ftbq.create_chapter_group" -> commitSingle(arguments, createChapterGroup(arguments));
             case "ftbq.create_reward_table" -> commitSingle(arguments, createRewardTable(arguments));
