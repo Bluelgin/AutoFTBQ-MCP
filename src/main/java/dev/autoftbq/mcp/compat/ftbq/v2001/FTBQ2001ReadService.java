@@ -3,6 +3,7 @@ package dev.autoftbq.mcp.compat.ftbq.v2001;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import dev.autoftbq.mcp.compat.ftbq.v2001.mixin.QuestScreenAccessor;
+import dev.autoftbq.mcp.client.McpContextSelection;
 import dev.ftb.mods.ftbquests.client.ClientQuestFile;
 import dev.ftb.mods.ftbquests.quest.Chapter;
 import dev.ftb.mods.ftbquests.quest.Quest;
@@ -46,6 +47,44 @@ public final class FTBQ2001ReadService {
         });
         result.add("chapter", chapter);
         result.add("selected_quests", selected);
+
+        java.util.Set<String> validChapters = new java.util.LinkedHashSet<>();
+        java.util.Set<String> validQuests = new java.util.LinkedHashSet<>();
+        ClientQuestFile.INSTANCE.getChapterGroups().forEach(group -> group.getChapters().forEach(value -> {
+            validChapters.add(value.getCodeString().toUpperCase());
+            value.getQuests().forEach(quest -> validQuests.add(quest.getCodeString().toUpperCase()));
+        }));
+        McpContextSelection.retain(validChapters, validQuests);
+
+        JsonArray mcpChapters = new JsonArray();
+        McpContextSelection.chapterIds().stream().sorted().forEach(id -> {
+            Chapter value = ClientQuestFile.INSTANCE.getChapter(QuestObjectBase.parseCodeString(id));
+            if (value == null) return;
+            JsonObject selectedChapter = new JsonObject();
+            selectedChapter.addProperty("id", value.getCodeString());
+            selectedChapter.addProperty("title", value.getTitle().getString());
+            JsonArray questIds = new JsonArray();
+            value.getQuests().forEach(quest -> questIds.add(quest.getCodeString()));
+            selectedChapter.add("quest_ids", questIds);
+            mcpChapters.add(selectedChapter);
+        });
+
+        JsonArray mcpQuests = new JsonArray();
+        McpContextSelection.questIds().stream().sorted().forEach(id -> {
+            Quest quest = ClientQuestFile.INSTANCE.getQuest(QuestObjectBase.parseCodeString(id));
+            if (quest == null) return;
+            JsonObject value = new JsonObject();
+            value.addProperty("id", quest.getCodeString());
+            value.addProperty("title", quest.getTitle().getString());
+            value.addProperty("chapter_id", quest.getChapter().getCodeString());
+            value.addProperty("x", quest.getX());
+            value.addProperty("y", quest.getY());
+            mcpQuests.add(value);
+        });
+        result.add("mcp_selected_chapters", mcpChapters);
+        result.add("mcp_selected_quests", mcpQuests);
+        result.addProperty("selection_hint",
+                "Alt+left-click chapter or quest buttons in FTBQ to toggle persistent MCP context selection.");
         return result;
     }
 
