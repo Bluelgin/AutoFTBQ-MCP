@@ -86,6 +86,10 @@ public final class McpToolCatalog {
                         p("type_id", str("Exact registered type id"))
                 ), List.of("kind", "type_id")));
 
+        tools.add(tool("ftbq.validate_book",
+                "Validate the live book after edits. Checks dependency cycles/depth, runtime task/reward type registration, and duplicate chapter/quest titles.",
+                obj(), List.of()));
+
         JsonObject writeBase = obj(
                 p("expected_revision", str("Revision previously read from ftbq.get_context/get_book")),
                 p("proposal_id", str("Optional idempotency key; generate a stable UUID when retrying the same write"))
