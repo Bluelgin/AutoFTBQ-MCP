@@ -28,8 +28,8 @@ public final class McpToolService {
         return switch (name) {
             case "autoftbq.health" -> health();
             case "minecraft.capabilities" -> client(() -> GameDataCatalog.query(withKind(new JsonObject(), "capabilities")));
-            case "minecraft.search_registry" -> searchRegistry(args);
-            case "minecraft.validate_ids" -> validateIds(args);
+            case "minecraft.search_registry" -> searchRegistry(arguments);
+            case "minecraft.validate_ids" -> validateIds(arguments);
             case "minecraft.inspect_item" -> client(() -> GameDataCatalog.query(withKind(arguments.deepCopy(), "item_evidence")));
             case "minecraft.search_recipes" -> client(() -> GameDataCatalog.query(withKind(arguments.deepCopy(), "recipes")));
             case "minecraft.inspect_resource" -> serverResource(arguments);
@@ -43,21 +43,21 @@ public final class McpToolService {
             case "ftbq.list_reward_types" -> client(() -> adapter().listTypes("reward"));
             case "ftbq.get_type_schema" -> client(() -> adapter().typeSchema(required(arguments, "kind"), required(arguments, "type_id")));
 
-            case "ftbq.create_chapter" -> commitSingle(arguments, createChapter(args));
-            case "ftbq.create_quest" -> commitSingle(arguments, createQuest(args));
-            case "ftbq.update_quest" -> commitSingle(arguments, updateQuest(args));
-            case "ftbq.add_task" -> commitSingle(arguments, addTask(args));
-            case "ftbq.add_reward" -> commitSingle(arguments, addReward(args));
-            case "ftbq.remove_quest_object" -> commitSingle(arguments, op("remove_quest_object", "object_id", required(args, "object_id")));
-            case "ftbq.delete_quest" -> commitSingle(arguments, op("delete_quest", "quest_id", required(args, "quest_id")));
-            case "ftbq.delete_chapter" -> commitSingle(arguments, op("delete_chapter", "chapter_id", required(args, "chapter_id")));
-            case "ftbq.connect_quests" -> commitSingle(arguments, dependency(args));
-            case "ftbq.apply_dependency_plan" -> commit(arguments, dependencyPlan(args));
-            case "ftbq.apply_operations" -> commit(arguments, requiredArray(args, "operations"));
+            case "ftbq.create_chapter" -> commitSingle(arguments, createChapter(arguments));
+            case "ftbq.create_quest" -> commitSingle(arguments, createQuest(arguments));
+            case "ftbq.update_quest" -> commitSingle(arguments, updateQuest(arguments));
+            case "ftbq.add_task" -> commitSingle(arguments, addTask(arguments));
+            case "ftbq.add_reward" -> commitSingle(arguments, addReward(arguments));
+            case "ftbq.remove_quest_object" -> commitSingle(arguments, op("remove_quest_object", "object_id", required(arguments, "object_id")));
+            case "ftbq.delete_quest" -> commitSingle(arguments, op("delete_quest", "quest_id", required(arguments, "quest_id")));
+            case "ftbq.delete_chapter" -> commitSingle(arguments, op("delete_chapter", "chapter_id", required(arguments, "chapter_id")));
+            case "ftbq.connect_quests" -> commitSingle(arguments, dependency(arguments));
+            case "ftbq.apply_dependency_plan" -> commit(arguments, dependencyPlan(arguments));
+            case "ftbq.apply_operations" -> commit(arguments, requiredArray(arguments, "operations"));
             case "ftbq.undo_last" -> undo(arguments);
 
             case "ftbq.transaction_begin" -> transactions.begin();
-            case "ftbq.transaction_stage" -> transactions.stage(required(arguments, "transaction_id"), requiredArray(args, "operations"));
+            case "ftbq.transaction_stage" -> transactions.stage(required(arguments, "transaction_id"), requiredArray(arguments, "operations"));
             case "ftbq.transaction_status" -> transactions.status(required(arguments, "transaction_id"));
             case "ftbq.transaction_commit" -> transactions.commit(required(arguments, "transaction_id"));
             case "ftbq.transaction_abort" -> transactions.abort(required(arguments, "transaction_id"));
