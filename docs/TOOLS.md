@@ -117,6 +117,12 @@ Combines runtime defaults with curated metadata for known official types.
 
 Unknown third-party types still expose runtime defaults and remain writable through the generic typed-object path.
 
+### ftbq.validate_book
+
+Runs a read-only integrity pass over the live task book and reports structured issues.
+
+Current 2001 checks cover dependency cycles/depth, unregistered runtime task/reward types, and duplicate chapter/quest titles. Results include the book revision and error/warning counts.
+
 ## Immediate safe writes
 
 Every immediate write requires `expected_revision`.
@@ -132,17 +138,29 @@ A successful result returns:
 
 Reuse the same `proposal_id` when retrying the exact same write after a transport failure.
 
+### ftbq.create_chapter_group / ftbq.delete_chapter_group
+
+Creates or deletes chapter groups. Deleting a non-default group uses FTBQ's own behavior to move its chapters back to the default group.
+
+### ftbq.create_reward_table / ftbq.delete_reward_table
+
+Creates or deletes independent FTB Quests reward tables.
+
 ### ftbq.create_chapter
 
-Creates a chapter in the default chapter group.
+Creates a chapter in the default group or an explicit `group_id`.
+
+### ftbq.update_chapter / ftbq.move_chapter_to_group
+
+Patches common chapter title/subtitle/icon fields or moves an existing chapter between groups without changing quest IDs.
 
 ### ftbq.create_quest
 
 Creates a quest at an explicit chapter/x/y location.
 
-### ftbq.update_quest
+### ftbq.update_quest / ftbq.move_quest
 
-Patches common safe quest fields.
+Patches common quest fields or moves a quest to another chapter and/or canvas coordinates while preserving its ID and child objects.
 
 ### ftbq.add_task / ftbq.add_reward
 
@@ -157,9 +175,21 @@ The server still creates the real FTBQ object; unsupported types are rejected.
 
 `ftbquests:command` rewards are rejected by default even through the generic/raw path. A server owner must explicitly set `allowCommandRewards=true` in `autoftbq-mcp.json` before an agent can create or overwrite command rewards.
 
-### ftbq.connect_quests
+### ftbq.update_quest_object
 
-Adds one dependency edge.
+Patches an existing task or reward **in place** while preserving its object ID and runtime type.
+
+Read `ftbq.get_object` first. `changes_snbt` is merged onto the object's existing serialized data and `remove_fields` explicitly deletes selected keys. This is the preferred path for changing counts, targets, addon-specific fields, and similar object data without delete/recreate semantics.
+
+Existing command rewards remain protected by the server command-reward policy.
+
+### ftbq.move_quest_object
+
+Moves one task or reward to an exact zero-based position in its quest list.
+
+### ftbq.connect_quests / ftbq.disconnect_quests
+
+Adds or removes one dependency edge.
 
 ### ftbq.apply_dependency_plan
 
@@ -172,6 +202,8 @@ Removes one task or reward.
 ### ftbq.delete_quest / ftbq.delete_chapter
 
 Destructive operations, but still protected by revision checking and full transaction rollback.
+
+The same protection applies to chapter-group and reward-table deletion.
 
 ### ftbq.apply_operations
 
