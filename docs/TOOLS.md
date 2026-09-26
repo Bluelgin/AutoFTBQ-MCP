@@ -150,9 +150,13 @@ Creates or deletes independent FTB Quests reward tables.
 
 Creates a chapter in the default group or an explicit `group_id`.
 
-### ftbq.update_chapter / ftbq.move_chapter_to_group
+### ftbq.update_chapter / ftbq.move_chapter_to_group / ftbq.reorder_chapter
 
-Patches common chapter title/subtitle/icon fields or moves an existing chapter between groups without changing quest IDs.
+Patches common chapter title/subtitle/icon fields, moves an existing chapter between groups, or moves it to an exact zero-based index inside its current group without changing quest IDs.
+
+### ftbq.reorder_chapter_group
+
+Moves a non-default chapter group to an exact zero-based index among non-default groups. The default group remains fixed.
 
 ### ftbq.create_quest
 
