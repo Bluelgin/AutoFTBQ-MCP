@@ -7,6 +7,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
+import dev.ftb.mods.ftblibrary.util.KnownServerRegistries;
 
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicLong;
@@ -62,7 +63,8 @@ public final class GameDataCatalog {
             for (String entry : new String[]{
                     "registry_page:item", "registry_page:block", "registry_page:entity",
                     "registry_page:fluid", "registry_page:mob_effect", "registry_page:stat",
-                    "registry_page:recipe_type", "registry_page:biome", "registry_page:structure",
+                    "registry_page:recipe_type", "registry_page:biome", "registry_page:dimension",
+                    "registry_page:advancement",
                     "item_evidence", "recipes",
                     "server_resource:loot_tables", "server_resource:advancements"
             }) supported.add(entry);
@@ -86,17 +88,59 @@ public final class GameDataCatalog {
         }
 
         if ("registry_page".equals(kind)) {
-            Registry<?> registry = registry(text(args, "registry"));
+            String registryName = text(args, "registry");
+            int offset = Math.max(0, args.has("offset") ? args.get("offset").getAsInt() : 0);
+            int limit = Math.max(1, Math.min(100, args.has("limit") ? args.get("limit").getAsInt() : 50));
+            String needle = text(args, "query").toLowerCase(Locale.ROOT);
+            String namespace = text(args, "namespace");
+
+            if ("dimension".equals(registryName) || "advancement".equals(registryName)) {
+                KnownServerRegistries known = KnownServerRegistries.client;
+                if (known == null) {
+                    result.addProperty("status", "unavailable");
+                    result.addProperty("message", "FTB Library has not received the server registry snapshot yet.");
+                    return result;
+                }
+
+                java.util.List<ResourceLocation> ids = ("dimension".equals(registryName)
+                        ? known.dimensions.stream()
+                        : known.advancements.keySet().stream())
+                        .filter(id -> (namespace.isBlank() || id.getNamespace().equals(namespace))
+                                && id.toString().toLowerCase(Locale.ROOT).contains(needle))
+                        .sorted()
+                        .toList();
+
+                JsonArray entries = new JsonArray();
+                for (int i = offset; i < Math.min(ids.size(), offset + limit); i++) {
+                    ResourceLocation id = ids.get(i);
+                    JsonObject entry = new JsonObject();
+                    entry.addProperty("id", id.toString());
+                    entry.addProperty("registered", true);
+                    if ("advancement".equals(registryName)) {
+                        KnownServerRegistries.AdvancementInfo info = known.advancements.get(id);
+                        if (info != null && info.name != null) {
+                            entry.addProperty("display_name", info.name.getString());
+                        }
+                    }
+                    entries.add(entry);
+                }
+
+                result.addProperty("registry", registryName);
+                result.add("entries", entries);
+                result.addProperty("total", ids.size());
+                result.addProperty("next_offset", Math.min(ids.size(), offset + entries.size()));
+                result.addProperty("has_more", offset + entries.size() < ids.size());
+                result.addProperty("coverage", "ftb_library_server_registry_snapshot");
+                result.addProperty("status", entries.isEmpty() ? "not_found" : "ok");
+                return result;
+            }
+
+            Registry<?> registry = registry(registryName);
             if (registry == null) {
                 result.addProperty("status", "unsupported");
                 result.addProperty("message", "This registry is not available from the current client adapter.");
                 return result;
             }
-
-            int offset = Math.max(0, args.has("offset") ? args.get("offset").getAsInt() : 0);
-            int limit = Math.max(1, Math.min(100, args.has("limit") ? args.get("limit").getAsInt() : 50));
-            String needle = text(args, "query").toLowerCase(Locale.ROOT);
-            String namespace = text(args, "namespace");
 
             var ids = registry.keySet().stream()
                     .filter(id -> (namespace.isBlank() || id.getNamespace().equals(namespace))
@@ -113,7 +157,7 @@ public final class GameDataCatalog {
                 entries.add(entry);
             }
 
-            result.addProperty("registry", text(args, "registry"));
+            result.addProperty("registry", registryName);
             result.add("entries", entries);
             result.addProperty("total", ids.size());
             result.addProperty("next_offset", Math.min(ids.size(), offset + entries.size()));
@@ -184,8 +228,6 @@ public final class GameDataCatalog {
             case "recipe_type" -> BuiltInRegistries.RECIPE_TYPE;
             case "biome" -> minecraft.level == null ? null
                     : minecraft.level.registryAccess().registry(Registries.BIOME).orElse(null);
-            case "structure" -> minecraft.level == null ? null
-                    : minecraft.level.registryAccess().registry(Registries.STRUCTURE).orElse(null);
             default -> null;
         };
     }
