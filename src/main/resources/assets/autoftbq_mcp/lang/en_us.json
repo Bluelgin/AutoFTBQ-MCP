@@ -1,0 +1,4 @@
+{
+  "autoftbq_mcp.status.started": "AutoFTBQ MCP listening on %s",
+  "autoftbq_mcp.status.failed": "AutoFTBQ MCP failed to start: %s"
+}
