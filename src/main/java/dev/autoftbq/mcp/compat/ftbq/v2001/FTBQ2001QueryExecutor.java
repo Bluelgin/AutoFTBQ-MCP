@@ -6,6 +6,8 @@ import com.google.gson.JsonObject;
 import dev.ftb.mods.ftblibrary.util.KnownServerRegistries;
 import dev.ftb.mods.ftbquests.client.ClientQuestFile;
 import dev.ftb.mods.ftbquests.quest.Quest;
+import dev.ftb.mods.ftbquests.quest.reward.RewardTypes;
+import dev.ftb.mods.ftbquests.quest.task.TaskTypes;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -17,7 +19,9 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
 
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 
 /** Executes the small, explicit read-only query whitelist for FTBQ 2001. */
 public final class FTBQ2001QueryExecutor {
@@ -31,6 +35,7 @@ public final class FTBQ2001QueryExecutor {
             case "search_registry" -> searchRegistry(arguments);
             case "search_registry_batch" -> searchRegistryBatch(arguments);
             case "validate_registry_ids" -> validateRegistryIds(arguments);
+            case "validate_book" -> validateBook();
             case "search_recipes" -> searchRecipes(arguments);
             default -> error("不支持的只读游戏查询：" + name);
         };
@@ -92,6 +97,94 @@ public final class FTBQ2001QueryExecutor {
         result.add("quests", quests);
         result.addProperty("selected_count", quests.size());
         return result;
+    }
+
+    private static JsonObject validateBook() {
+        if (!ClientQuestFile.exists()) {
+            return error("FTB Quests 客户端任务书尚未加载");
+        }
+
+        JsonArray issues = new JsonArray();
+        int[] errors = {0};
+        int[] warnings = {0};
+        boolean[] truncated = {false};
+
+        for (var group : ClientQuestFile.INSTANCE.getChapterGroups()) {
+            Map<String, String> chapterTitles = new LinkedHashMap<>();
+            for (var chapter : group.getChapters()) {
+                String chapterTitle = chapter.getTitle().getString().trim().toLowerCase(Locale.ROOT);
+                if (!chapterTitle.isBlank()) {
+                    String previous = chapterTitles.putIfAbsent(chapterTitle, chapter.getCodeString());
+                    if (previous != null) {
+                        addIssue(issues, warnings, truncated, "warning", "duplicate_chapter_title",
+                                chapter.getCodeString(),
+                                "Chapter title duplicates " + previous + " inside the same chapter group.");
+                    }
+                }
+
+                Map<String, String> questTitles = new LinkedHashMap<>();
+                for (Quest quest : chapter.getQuests()) {
+                    String questTitle = quest.getTitle().getString().trim().toLowerCase(Locale.ROOT);
+                    if (!questTitle.isBlank()) {
+                        String previous = questTitles.putIfAbsent(questTitle, quest.getCodeString());
+                        if (previous != null) {
+                            addIssue(issues, warnings, truncated, "warning", "duplicate_quest_title",
+                                    quest.getCodeString(),
+                                    "Quest title duplicates " + previous + " inside the same chapter.");
+                        }
+                    }
+
+                    if (!quest.verifyDependencies(false)) {
+                        addIssue(issues, errors, truncated, "error", "invalid_dependency_graph",
+                                quest.getCodeString(),
+                                "Quest dependencies contain a loop or exceed the supported dependency depth.");
+                    }
+
+                    quest.getTasks().forEach(task -> {
+                        ResourceLocation typeId = task.getType().getTypeId();
+                        if (!TaskTypes.TYPES.containsKey(typeId)) {
+                            addIssue(issues, errors, truncated, "error", "unregistered_task_type",
+                                    task.getCodeString(), "Task type is not registered at runtime: " + typeId);
+                        }
+                    });
+                    quest.getRewards().forEach(reward -> {
+                        ResourceLocation typeId = reward.getType().getTypeId();
+                        if (!RewardTypes.TYPES.containsKey(typeId)) {
+                            addIssue(issues, errors, truncated, "error", "unregistered_reward_type",
+                                    reward.getCodeString(), "Reward type is not registered at runtime: " + typeId);
+                        }
+                    });
+                }
+            }
+        }
+
+        JsonObject result = new JsonObject();
+        result.addProperty("status", "ok");
+        result.addProperty("book_revision", FTBQ2001Revision.compute(ClientQuestFile.INSTANCE));
+        result.addProperty("valid", errors[0] == 0);
+        result.addProperty("error_count", errors[0]);
+        result.addProperty("warning_count", warnings[0]);
+        result.addProperty("issue_count", issues.size());
+        result.addProperty("issues_truncated", truncated[0]);
+        result.add("issues", issues);
+        result.addProperty("coverage",
+                "dependency_cycles_runtime_types_and_duplicate_titles");
+        return result;
+    }
+
+    private static void addIssue(JsonArray issues, int[] counter, boolean[] truncated,
+                                 String severity, String code, String objectId, String message) {
+        counter[0]++;
+        if (issues.size() >= 500) {
+            truncated[0] = true;
+            return;
+        }
+        JsonObject issue = new JsonObject();
+        issue.addProperty("severity", severity);
+        issue.addProperty("code", code);
+        issue.addProperty("object_id", objectId);
+        issue.addProperty("message", message);
+        issues.add(issue);
     }
 
     private static JsonObject searchRecipes(JsonObject arguments) {
