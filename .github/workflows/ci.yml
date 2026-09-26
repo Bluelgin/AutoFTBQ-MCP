@@ -50,3 +50,9 @@ jobs:
           }
       - name: Build
         run: ./gradlew build --stacktrace
+      - name: Upload mod jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: autoftbq-mcp-forge-1.20.1
+          path: build/libs/*.jar
+          if-no-files-found: error
