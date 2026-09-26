@@ -137,6 +137,12 @@ Explicit staged transactions:
 
 See [Tool contract](docs/TOOLS.md) and [operation contract](docs/OPERATION_CONTRACT.md).
 
+### FTBQ selection context
+
+While the FTB Quests screen is open, **Alt + left-click** chapter or quest buttons to toggle MCP-only context selection. Selected objects receive a green outline and are returned by `ftbq.get_context` as `mcp_selected_chapters` / `mcp_selected_quests`.
+
+This selection is independent from FTBQ's native editor selection and does not require AutoFTBQ Studio.
+
 ## Live editing model
 
 Immediate semantic write tools are one server transaction per tool call.
@@ -192,6 +198,12 @@ gradlew.bat build
 ```
 
 Output is under `build/libs/`.
+
+With Minecraft running, a protocol/tool smoke test can read the generated runtime credential file directly:
+
+```bash
+python scripts/mcp-smoke.py /path/to/instance/config/autoftbq-mcp/runtime.json
+```
 
 For a running-game transport check, use the zero-dependency [runtime smoke test](docs/SMOKE_TEST.md).
 
