@@ -123,6 +123,28 @@ Runs a read-only integrity pass over the live task book and reports structured i
 
 Current 2001 checks cover dependency cycles/depth, unregistered runtime task/reward types, and duplicate chapter/quest titles. Results include the book revision and error/warning counts.
 
+## Authoring philosophy and visual inspection (read-only)
+
+- `ftbq.get_layout_snapshot` reads one FTBQ 2001 chapter's true quest IDs,
+  coordinates, dependencies, task/reward titles/types and bounded SNBT examples
+  plus the live book revision.
+- `ftbq.extract_design_profile` derives teaching phases from prerequisite
+  depth, entry/exit gates, branching/convergence milestones and reward pacing.
+  It also reports coordinate issues, but cannot infer the author's true intent
+  without an agent reading the task content.
+- `ftbq.compare_design_profiles` compares two existing chapters; differences
+  are presented for human/agent review, never considered automatic errors.
+- `ftbq.analyze_layout` reports coordinate overlaps, tight spacing, reversed
+  links, and bounded crossing tests. Pass `minimum_spacing` to set a threshold.
+- `ftbq.capture_view` returns a real screenshot of the **currently open FTBQ
+  screen** as image/png MCP ImageContent and textual/structured metadata. The
+  optional `max_dimension` caps the long edge (512 to 2048, default 1600).
+  Images above 2.5 MB produce `too_large`; close the screen to receive
+  `unavailable`. The tool never opens/navigates a screen or mutates the book.
+
+See [Design workflow](DESIGN_WORKFLOW.md) for the recommended agent sequence,
+capability limitations, screenshot precautions and game acceptance cases.
+
 ## Immediate safe writes
 
 Every immediate write requires `expected_revision`.
