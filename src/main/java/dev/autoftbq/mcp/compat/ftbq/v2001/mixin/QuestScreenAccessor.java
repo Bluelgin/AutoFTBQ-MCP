@@ -10,4 +10,10 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 public interface QuestScreenAccessor {
     @Accessor("selectedChapter")
     Chapter autoftbq$getSelectedChapter();
+
+    @Accessor("scrollWidth")
+    double autoftbq$getScrollWidth();
+
+    @Accessor("scrollHeight")
+    double autoftbq$getScrollHeight();
 }
