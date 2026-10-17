@@ -25,6 +25,43 @@ The capture requires the native FTB Quests quest screen to be **open**. The tool
 
 Images use an MCP ImageContent block with MIME type image/png; the image base64 is removed from JSON/text metadata to avoid duplicate model context. The PNG payload is capped at 2.5 MB. If a client discards image blocks, it cannot actually perform visual judgement.
 
+## Complete chapter previews and automatic native framing (stage two)
+
+Two complementary image paths are available:
+
+1. `ftbq.render_chapter_map(chapter_id, max_dimension)` produces a **whole-chapter schematic**
+   from live node coordinates and dependencies. It works even when the GUI is
+   closed, returns MCP PNG ImageContent and a stable index-to-real-quest-ID
+   legend, and marks `native_ftbq_render=false`. It does **not** display the
+   FTBQ item icons, theme, custom images or actual render sizes.
+2. `ftbq.capture_chapter(chapter_id, max_dimension, require_full_chapter)`
+   temporarily switches the **already open** native FTB Quests GUI to the
+   target chapter and chooses the greatest supported zoom that fits, if
+   feasible. The user does **not** need to manually select that chapter.
+   The tool returns a `capture_id` and `status=pending`; after Minecraft
+   renders new frames, call `ftbq.get_capture_result(capture_id)` until it
+   returns a PNG. The old chapter, zoom and scroll offsets are restored,
+   and only one capture session is allowed at a time. A stale screenshot
+   automatically expires after 60 seconds.
+   Use `ftbq.cancel_capture(capture_id)` to cancel a pending capture.
+   If the chapter does not fit at FTBQ's smallest native zoom (4), the
+   response explicitly sets `full_chapter_fits=false`. Setting
+   `require_full_chapter=true` rejects that capture; use the schematic
+   overview instead of asserting that a cropped native image includes all
+   nodes. **Do not** confuse a graph overview with a native screenshot.
+
+Native framing is intentionally limited to an *already open* FTBQ GUI. It
+does not force open/close Minecraft screens, override visibility, switch to
+a different world, or change task progress. It restores the current view
+after capture, unless the player closes the GUI during the operation.
+The screenshot includes the visible GUI framebuffer and possibly other
+overlays, so the external agent should avoid publishing it without consent.
+
+The capture is tick-driven. MCP tool calls never block the Minecraft render
+thread while waiting for frames. If the player changes screens, the book
+revision changes, or capture times out, the result is a structured error
+rather than a fabricated image.
+
 ## Suggested agent workflow
 
 1. **Find the reference.** Call ftbq.get_context to recover user-selected chapters (Alt+click), or use a chapter ID supplied by the user.
