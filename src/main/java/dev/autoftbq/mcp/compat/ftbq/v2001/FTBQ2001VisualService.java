@@ -50,6 +50,11 @@ public final class FTBQ2001VisualService {
             JsonObject q = new JsonObject();
             q.addProperty("id", quest.getCodeString());
             q.addProperty("title", quest.getTitle().getString());
+            // Retain a bounded sample of the original quest wording and
+            // serialized author choices for the external agent to interpret.
+            CompoundTag questData = new CompoundTag();
+            quest.writeData(questData);
+            q.addProperty("data_snbt", bounded(questData.toString(), 2048));
             q.addProperty("x", quest.getX());
             q.addProperty("y", quest.getY());
             JsonArray dependencies = new JsonArray();
@@ -82,7 +87,7 @@ public final class FTBQ2001VisualService {
         }
         result.add("quests", quests);
         result.addProperty("quest_count", quests.size());
-        result.addProperty("limits", "512 quests per chapter; dependency list capped at 256 per quest; SNBT excerpt capped at 1024 chars per task/reward.");
+        result.addProperty("limits", "512 quests per chapter; dependency list capped at 256 per quest; Quest SNBT excerpt capped at 2048 chars; task/reward SNBT excerpts capped at 1024 chars.");
         return result;
     }
 
