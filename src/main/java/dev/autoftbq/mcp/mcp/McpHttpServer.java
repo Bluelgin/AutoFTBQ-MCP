@@ -267,13 +267,28 @@ public final class McpHttpServer {
 
     private static JsonObject toolResult(JsonObject value, boolean failed) {
         JsonObject toolResult = new JsonObject();
+        JsonObject metadata = value.deepCopy();
+        // A successful screenshot contains an internal transfer field. Keep image
+        // data out of structuredContent/text so agents do not receive it three times.
+        String imageBase64 = null;
+        if (!failed && metadata.has("_image_base64")) {
+            imageBase64 = metadata.get("_image_base64").getAsString();
+        }
+        metadata.remove("_image_base64");
         JsonArray content = new JsonArray();
         JsonObject text = new JsonObject();
         text.addProperty("type", "text");
-        text.addProperty("text", GSON.toJson(value));
+        text.addProperty("text", GSON.toJson(metadata));
         content.add(text);
+        if (imageBase64 != null) {
+            JsonObject image = new JsonObject();
+            image.addProperty("type", "image");
+            image.addProperty("mimeType", "image/png");
+            image.addProperty("data", imageBase64);
+            content.add(image);
+        }
         toolResult.add("content", content);
-        toolResult.add("structuredContent", value);
+        toolResult.add("structuredContent", metadata);
         toolResult.addProperty("isError", failed);
         return toolResult;
     }
