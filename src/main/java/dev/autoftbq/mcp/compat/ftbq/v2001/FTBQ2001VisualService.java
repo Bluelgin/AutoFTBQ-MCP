@@ -29,15 +29,13 @@ public final class FTBQ2001VisualService {
         if (!ClientQuestFile.exists()) return error("unavailable", "FTB Quests client book is not loaded.");
         String chapterId = string(args, "chapter_id");
         if (chapterId.isBlank()) return error("invalid_argument", "chapter_id is required.");
-        JsonObject read;
+        Chapter chapter;
         try {
-            read = FTBQ2001ReadService.chapter(chapterId);
+            chapter = ClientQuestFile.INSTANCE.getChapter(
+                    dev.ftb.mods.ftbquests.quest.QuestObjectBase.parseCodeString(chapterId));
         } catch (RuntimeException ex) {
             return error("invalid_argument", "Invalid chapter identifier.");
         }
-        if (!"ok".equals(string(read, "status"))) return read;
-        Chapter chapter = ClientQuestFile.INSTANCE.getChapter(
-                dev.ftb.mods.ftbquests.quest.QuestObjectBase.parseCodeString(chapterId));
         if (chapter == null) return error("not_found", "Chapter does not exist.");
         if (chapter.getQuests().size() > MAX_QUESTS) return error("too_large", "At most 512 quests can be analyzed at once.");
 
