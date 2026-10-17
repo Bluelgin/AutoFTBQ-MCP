@@ -44,6 +44,9 @@ public record ToolDefinition(String name, String description, JsonObject inputSc
                 || name.equals("ftbq.compare_design_profiles")
                 || name.equals("ftbq.analyze_layout")
                 || name.equals("ftbq.capture_view")
+                || name.equals("ftbq.capture_chapter")
+                || name.equals("ftbq.render_chapter_map")
+                || name.equals("ftbq.cancel_capture")
                 || name.equals("ftbq.transaction_status");
     }
 }
