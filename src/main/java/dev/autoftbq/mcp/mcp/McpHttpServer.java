@@ -234,8 +234,10 @@ public final class McpHttpServer {
                 + "progression design, first inspect ftbq.get_layout_snapshot and "
                 + "ftbq.extract_design_profile, then ground the new progression in actual recipes, "
                 + "author with revision guards, compare design profiles and validate the book. "
-                + "For visual judgement, call ftbq.capture_view only when the player has the FTBQ GUI open; "
-                + "do not claim to have seen any screenshot if the tool returned unavailable.";
+                + "For full structural coverage, call ftbq.render_chapter_map; its schematic is not a native screenshot. "
+                + "For native visual judgement, use ftbq.capture_chapter followed by ftbq.get_capture_result "
+                + "when FTBQ is already open; check full_chapter_fits and view_restored. "
+                + "Do not claim to have seen any native screenshot if the image was unavailable.";
     }
 
     private JsonObject listTools(boolean modern) {
