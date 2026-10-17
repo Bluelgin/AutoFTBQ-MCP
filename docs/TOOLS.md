@@ -142,6 +142,27 @@ Current 2001 checks cover dependency cycles/depth, unregistered runtime task/rew
   Images above 2.5 MB produce `too_large`; close the screen to receive
   `unavailable`. The tool never opens/navigates a screen or mutates the book.
 
+### Complete chapter visual tools
+
+- `ftbq.render_chapter_map(chapter_id, max_dimension)`: a whole-chapter
+  schematic PNG drawn from actual quest coordinates/dependencies; includes an
+  ordinal/quest-ID legend. No client GUI required. It is deliberately **not**
+  a native FTBQ screenshot and does not reproduce custom icons/images.
+- `ftbq.capture_chapter(chapter_id, max_dimension, require_full_chapter)`:
+  automatically frames a chapter in the **already open** FTBQ UI; responds
+  with `status=pending` and `capture_id`. The player need not navigate to
+  the requested chapter, but FTBQ must already be open. No book changes.
+- `ftbq.get_capture_result(capture_id)`: polls the pending image. When ready,
+  returns an MCP PNG ImageContent block plus `full_chapter_fits`, `zoom_used`,
+  `view_restored` and `book_revision`. Results expire after 60 seconds.
+- `ftbq.cancel_capture(capture_id)`: aborts an unfinished session and restores
+  the prior GUI chapter, zoom and scroll where possible.
+
+**Important:** An enormous chapter may not fit even at native FTBQ zoom 4.
+`require_full_chapter=true` refuses a misleading "full" screenshot; use the
+schematic alternative instead. These are viewport operations, not changes to
+quest data. Screenshots can include unrelated overlays.
+
 See [Design workflow](DESIGN_WORKFLOW.md) for the recommended agent sequence,
 capability limitations, screenshot precautions and game acceptance cases.
 
