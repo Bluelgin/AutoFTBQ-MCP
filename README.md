@@ -170,7 +170,14 @@ a new chapter using the actual loaded modpack's recipes.
 - `ftbq.compare_design_profiles` — review reference vs candidate design decisions.
 - `ftbq.analyze_layout` — deterministic spacing/crossing diagnostics.
 - `ftbq.capture_view` — real screenshot as MCP ImageContent **when the native
-  FTB Quests screen is currently open**; capture does not navigate the UI.
+  FTB Quests screen is currently open**.
+- `ftbq.render_chapter_map` — complete chapter structural PNG even when the
+  GUI is closed (schematic, not an FTBQ framebuffer).
+- `ftbq.capture_chapter` / `ftbq.get_capture_result` — temporarily navigate
+  and auto-frame a chapter **inside the already open FTBQ GUI**, return the
+  screenshot after rendered frames, and restore the original view. Returns
+  `full_chapter_fits=false` when native zoom limits cannot show the whole
+  chapter. `ftbq.cancel_capture` cancels the pending frame.
 
 The mod does **not** run its own AI, automatically change tasks from a
 screenshot or guarantee that the entire off-screen chapter was captured.
