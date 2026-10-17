@@ -261,7 +261,7 @@ public final class McpHttpServer {
             JsonObject value = tools.invoke(name, arguments);
             boolean failed = value.has("status") && Set.of(
                     "invalid_argument", "unknown_tool", "unavailable", "permission_denied",
-                    "unsupported_version", "failed", "conflict", "too_large"
+                    "unsupported_version", "failed", "conflict", "too_large", "cancelled"
             ).contains(value.get("status").getAsString());
             return rpcResult(id, toolResult(value, failed), modern);
         } catch (IllegalArgumentException error) {
