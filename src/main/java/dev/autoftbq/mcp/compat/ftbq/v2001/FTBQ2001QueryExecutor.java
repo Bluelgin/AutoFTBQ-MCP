@@ -41,6 +41,10 @@ public final class FTBQ2001QueryExecutor {
             case "design_compare" -> FTBQ2001VisualService.compareDesign(arguments);
             case "layout_assessment" -> FTBQ2001VisualService.layoutAssessment(arguments);
             case "capture_view" -> FTBQ2001VisualService.captureView(arguments);
+            case "capture_chapter" -> FTBQ2001CaptureSession.begin(arguments);
+            case "capture_result" -> FTBQ2001CaptureSession.result(arguments);
+            case "capture_cancel" -> FTBQ2001CaptureSession.cancel(arguments);
+            case "render_chapter_map" -> FTBQ2001VisualService.renderChapterMap(arguments);
             case "search_recipes" -> searchRecipes(arguments);
             default -> error("不支持的只读游戏查询：" + name);
         };
