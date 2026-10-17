@@ -4,6 +4,9 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.mojang.blaze3d.platform.NativeImage;
 import dev.autoftbq.mcp.design.QuestDesignAnalyzer;
+import dev.autoftbq.mcp.design.ChapterMapRenderer;
+import dev.ftb.mods.ftblibrary.util.client.ClientUtils;
+import dev.ftb.mods.ftbquests.client.gui.quests.QuestScreen;
 import dev.ftb.mods.ftbquests.client.ClientQuestFile;
 import dev.ftb.mods.ftbquests.quest.Chapter;
 import dev.ftb.mods.ftbquests.quest.Quest;
@@ -126,13 +129,20 @@ public final class FTBQ2001VisualService {
         return response;
     }
 
+    public static JsonObject renderChapterMap(JsonObject args) {
+        JsonObject source = snapshot(args);
+        if (!"ok".equals(string(source, "status"))) return source;
+        int maxDimension = args.has("max_dimension") ? args.get("max_dimension").getAsInt() : 1600;
+        return ChapterMapRenderer.render(source, maxDimension);
+    }
+
     public static JsonObject captureView(JsonObject args) {
         if (!ClientQuestFile.exists()) return error("unavailable", "FTB Quests book is not loaded.");
         Minecraft minecraft = Minecraft.getInstance();
-        // FTB Library owns its own BaseScreen hierarchy; QuestScreen is not
-        // a subclass of vanilla Minecraft Screen. Use the same source of truth
-        // as ftbq.get_context instead of testing minecraft.screen instanceof.
-        if (ClientQuestFile.INSTANCE.getQuestScreen().isEmpty()) {
+        // FTBQ retains an old QuestScreen even when it has been closed.
+        // Check actual visible UI, not only the optional cached screen handle.
+        QuestScreen visible = ClientUtils.getCurrentGuiAs(QuestScreen.class);
+        if (visible == null || ClientQuestFile.INSTANCE.getQuestScreen().orElse(null) != visible) {
             return error("unavailable", "Open the native FTB Quests quest screen before capturing; the MCP tool will not switch screens.");
         }
         int requested = args.has("max_dimension") ? args.get("max_dimension").getAsInt() : 1600;
