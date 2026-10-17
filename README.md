@@ -157,6 +157,28 @@ Explicit staged transactions:
 
 See [Tool contract](docs/TOOLS.md) and [operation contract](docs/OPERATION_CONTRACT.md).
 
+### Progression design learning + visual inspection
+
+AutoFTBQ MCP can now read **how an existing chapter is designed**, not
+merely where its quest icons sit. The external agent can learn the author's
+entry gates, teaching phases, parallel specializations, milestone convergence,
+task types and reward pacing, then deliberately apply those principles to
+a new chapter using the actual loaded modpack's recipes.
+
+- `ftbq.get_layout_snapshot` — live quests, dependencies, task/reward examples and coordinates.
+- `ftbq.extract_design_profile` — graph-based progression and visual-layout features.
+- `ftbq.compare_design_profiles` — review reference vs candidate design decisions.
+- `ftbq.analyze_layout` — deterministic spacing/crossing diagnostics.
+- `ftbq.capture_view` — real screenshot as MCP ImageContent **when the native
+  FTB Quests screen is currently open**; capture does not navigate the UI.
+
+The mod does **not** run its own AI, automatically change tasks from a
+screenshot or guarantee that the entire off-screen chapter was captured.
+The MCP client/agent decides when to edit, calls the existing revision-guarded
+write tools and validates the results with the image + graph data.
+
+Follow the [design workflow and in-game acceptance checklist](docs/DESIGN_WORKFLOW.md).
+
 ### FTBQ selection context
 
 While the FTB Quests screen is open, **Alt + left-click** chapter or quest buttons to toggle MCP-only context selection. Selected objects receive a green outline and are returned by `ftbq.get_context` as `mcp_selected_chapters` / `mcp_selected_quests`.
