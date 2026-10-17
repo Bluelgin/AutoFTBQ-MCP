@@ -2,6 +2,7 @@ package dev.autoftbq.mcp.forge;
 
 import dev.autoftbq.mcp.AutoFTBQMcpMod;
 import dev.autoftbq.mcp.compat.ftbq.v2001.GameDataCatalog;
+import dev.autoftbq.mcp.compat.ftbq.v2001.FTBQ2001CaptureSession;
 import dev.autoftbq.mcp.mcp.McpRuntime;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RecipesUpdatedEvent;
