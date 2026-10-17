@@ -27,5 +27,8 @@ public final class AutoFTBQMcpClient {
     public static final class ForgeEvents {
         @SubscribeEvent public static void recipesChanged(RecipesUpdatedEvent event) { GameDataCatalog.invalidate(); }
         @SubscribeEvent public static void tagsChanged(TagsUpdatedEvent event) { GameDataCatalog.invalidate(); }
+        @SubscribeEvent public static void clientTick(TickEvent.ClientTickEvent event) {
+            if (event.phase == TickEvent.Phase.END) FTBQ2001CaptureSession.onClientTick();
+        }
     }
 }
