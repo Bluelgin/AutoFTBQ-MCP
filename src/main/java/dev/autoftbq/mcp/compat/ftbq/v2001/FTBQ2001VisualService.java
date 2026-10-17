@@ -5,7 +5,6 @@ import com.google.gson.JsonObject;
 import com.mojang.blaze3d.platform.NativeImage;
 import dev.autoftbq.mcp.design.QuestDesignAnalyzer;
 import dev.ftb.mods.ftbquests.client.ClientQuestFile;
-import dev.ftb.mods.ftbquests.client.gui.quests.QuestScreen;
 import dev.ftb.mods.ftbquests.quest.Chapter;
 import dev.ftb.mods.ftbquests.quest.Quest;
 import net.minecraft.client.Minecraft;
@@ -130,7 +129,10 @@ public final class FTBQ2001VisualService {
     public static JsonObject captureView(JsonObject args) {
         if (!ClientQuestFile.exists()) return error("unavailable", "FTB Quests book is not loaded.");
         Minecraft minecraft = Minecraft.getInstance();
-        if (!(minecraft.screen instanceof QuestScreen)) {
+        // FTB Library owns its own BaseScreen hierarchy; QuestScreen is not
+        // a subclass of vanilla Minecraft Screen. Use the same source of truth
+        // as ftbq.get_context instead of testing minecraft.screen instanceof.
+        if (ClientQuestFile.INSTANCE.getQuestScreen().isEmpty()) {
             return error("unavailable", "Open the native FTB Quests quest screen before capturing; the MCP tool will not switch screens.");
         }
         int requested = args.has("max_dimension") ? args.get("max_dimension").getAsInt() : 1600;
