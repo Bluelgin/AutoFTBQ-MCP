@@ -46,6 +46,10 @@ public final class McpToolService {
             case "ftbq.compare_design_profiles" -> client(() -> adapter().query("design_compare", arguments));
             case "ftbq.analyze_layout" -> client(() -> adapter().query("layout_assessment", arguments));
             case "ftbq.capture_view" -> client(() -> adapter().query("capture_view", arguments));
+            case "ftbq.capture_chapter" -> client(() -> adapter().query("capture_chapter", arguments));
+            case "ftbq.get_capture_result" -> client(() -> adapter().query("capture_result", arguments));
+            case "ftbq.cancel_capture" -> client(() -> adapter().query("capture_cancel", arguments));
+            case "ftbq.render_chapter_map" -> client(() -> adapter().query("render_chapter_map", arguments));
 
             case "ftbq.create_chapter_group" -> commitSingle(arguments, createChapterGroup(arguments));
             case "ftbq.create_reward_table" -> commitSingle(arguments, createRewardTable(arguments));
