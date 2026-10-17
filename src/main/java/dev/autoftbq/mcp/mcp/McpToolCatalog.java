@@ -120,6 +120,27 @@ public final class McpToolCatalog {
                 obj(p("max_dimension", integer("Maximum long-edge pixels of screenshot, 512-2048; default 1600"))),
                 List.of()));
 
+        tools.add(tool("ftbq.render_chapter_map",
+                "Generate an entire-chapter schematic PNG from live quest coordinates and dependencies. This does NOT reproduce native item icons, chapter images or themes, but covers nodes even when they cannot fit in one FTBQ screen.",
+                obj(
+                        p("chapter_id", str("Exact chapter ID to render")),
+                        p("max_dimension", integer("Maximum PNG width, 640-2048; default 1600"))
+                ), List.of("chapter_id")));
+        tools.add(tool("ftbq.capture_chapter",
+                "Temporarily switch the already OPEN native FTBQ GUI to a requested chapter, auto-fit using supported zoom range, center it, then capture after new frames. Read the resulting screenshot using ftbq.get_capture_result. Native view is restored. Does not open a closed GUI or force hidden quests to display.",
+                obj(
+                        p("chapter_id", str("Exact chapter ID to view")),
+                        p("max_dimension", integer("Maximum screenshot long edge, 512-2048; default 1600")),
+                        p("require_full_chapter", bool("Fail early rather than claiming full coverage when chapter cannot fit native zoom limits"))
+                ), List.of("chapter_id")));
+        tools.add(tool("ftbq.get_capture_result",
+                "Poll the pending native capture by capture_id. Returns pending or the actual image/png MCP ImageContent plus metadata; cached screenshot expires after 60 seconds.",
+                obj(p("capture_id", str("ID returned by ftbq.capture_chapter"))), List.of("capture_id")));
+        tools.add(tool("ftbq.cancel_capture",
+                "Cancel an in-progress native capture and restore the previous view. Only affects local FTBQ camera state, never book data.",
+                obj(p("capture_id", str("ID returned by ftbq.capture_chapter"))), List.of("capture_id")));
+
+
         JsonObject writeBase = obj(
                 p("expected_revision", str("Revision previously read from ftbq.get_context/get_book")),
                 p("proposal_id", str("Optional idempotency key; generate a stable UUID when retrying the same write"))
@@ -341,6 +362,9 @@ public final class McpToolCatalog {
 
     private static JsonObject str(String description) {
         JsonObject v = new JsonObject(); v.addProperty("type", "string"); v.addProperty("description", description); return v;
+    }
+    private static JsonObject bool(String description) {
+        JsonObject v = new JsonObject(); v.addProperty("type", "boolean"); v.addProperty("description", description); return v;
     }
     private static JsonObject integer(String description) {
         JsonObject v = new JsonObject(); v.addProperty("type", "integer"); v.addProperty("description", description); return v;
