@@ -114,6 +114,13 @@ public final class FTBQ2001CaptureSession {
             finish(session, error("conflict", "The book changed while its screenshot was being prepared"));
             return;
         }
+        // Give way to real player navigation. Do not override their manual
+        // chapter/zoom choice just to finish an MCP capture.
+        if (((QuestScreenAccessor) session.screen).autoftbq$getSelectedChapter() != session.target
+                || session.screen.getZoom() != session.zoomUsed) {
+            finish(session, error("cancelled", "The player changed the FTBQ chapter or zoom during capture"));
+            return;
+        }
         if (++session.ticks < SETTLE_TICKS) return;
         JsonObject result = new JsonObject();
         try {
@@ -173,6 +180,8 @@ public final class FTBQ2001CaptureSession {
     private static boolean restore(Session session) {
         // Don't forcibly reopen the screen if the player intentionally closed it.
         if (activeScreen() != session.screen) return false;
+        if (((QuestScreenAccessor) session.screen).autoftbq$getSelectedChapter() != session.target
+                || session.screen.getZoom() != session.zoomUsed) return false;
         try {
             session.screen.selectChapter(session.originalChapter);
             session.screen.addZoom((session.originalZoom - session.screen.getZoom()) / 4.0);
