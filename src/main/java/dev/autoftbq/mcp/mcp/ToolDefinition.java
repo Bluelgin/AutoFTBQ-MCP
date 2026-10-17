@@ -35,6 +35,10 @@ public record ToolDefinition(String name, String description, JsonObject inputSc
     }
 
     private boolean isReadOnly() {
+        // Capturing a different chapter and cancellation alter the player's
+        // ephemeral FTBQ view, so those tools are not truly read-only even
+        // though they never change the quest book.
+        if (name.equals("ftbq.capture_chapter") || name.equals("ftbq.cancel_capture")) return false;
         return name.equals("autoftbq.health")
                 || name.startsWith("minecraft.")
                 || name.startsWith("ftbq.get_")
@@ -44,9 +48,7 @@ public record ToolDefinition(String name, String description, JsonObject inputSc
                 || name.equals("ftbq.compare_design_profiles")
                 || name.equals("ftbq.analyze_layout")
                 || name.equals("ftbq.capture_view")
-                || name.equals("ftbq.capture_chapter")
                 || name.equals("ftbq.render_chapter_map")
-                || name.equals("ftbq.cancel_capture")
                 || name.equals("ftbq.transaction_status");
     }
 }
