@@ -230,7 +230,12 @@ public final class McpHttpServer {
         return "Read ftbq.get_context or ftbq.get_book before edits and pass expected_revision "
                 + "to every immediate write. Use minecraft.capabilities before making claims about "
                 + "complete modpack data coverage. Prefer semantic ftbq.* tools; use ftbq.apply_operations "
-                + "only when a semantic tool does not cover the object.";
+                + "only when a semantic tool does not cover the object. To learn an existing author's "
+                + "progression design, first inspect ftbq.get_layout_snapshot and "
+                + "ftbq.extract_design_profile, then ground the new progression in actual recipes, "
+                + "author with revision guards, compare design profiles and validate the book. "
+                + "For visual judgement, call ftbq.capture_view only when the player has the FTBQ GUI open; "
+                + "do not claim to have seen any screenshot if the tool returned unavailable.";
     }
 
     private JsonObject listTools(boolean modern) {
