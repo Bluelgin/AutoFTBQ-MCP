@@ -40,6 +40,10 @@ public record ToolDefinition(String name, String description, JsonObject inputSc
                 || name.startsWith("ftbq.get_")
                 || name.startsWith("ftbq.list_")
                 || name.equals("ftbq.validate_book")
+                || name.equals("ftbq.extract_design_profile")
+                || name.equals("ftbq.compare_design_profiles")
+                || name.equals("ftbq.analyze_layout")
+                || name.equals("ftbq.capture_view")
                 || name.equals("ftbq.transaction_status");
     }
 }
