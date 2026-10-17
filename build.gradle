@@ -34,6 +34,7 @@ minecraft {
 }
 
 repositories {
+    mavenCentral()
     maven { url = 'https://maven.architectury.dev/' }
     maven { url = 'https://maven.ftb.dev/releases' }
 }
@@ -44,6 +45,7 @@ dependencies {
     implementation fg.deobf("dev.ftb.mods:ftb-library-forge:${ftb_library_version}")
     implementation fg.deobf("dev.ftb.mods:ftb-teams-forge:${ftb_teams_version}")
     implementation fg.deobf("dev.ftb.mods:ftb-quests-forge:${ftb_quests_version}")
+    testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -70,4 +72,9 @@ jar {
             'MixinConfigs': 'autoftbq_mcp.mixins.json'
         ])
     }
+}
+
+// The progression analyzer is pure Java/Gson and can be tested without starting Minecraft.
+tasks.named('test', Test) {
+    useJUnitPlatform()
 }
