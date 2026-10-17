@@ -70,7 +70,7 @@ rather than a fabricated image.
 4. **Design before writing.** Prepare a short blueprint mapping player goals to intro/tutorial tasks, independent branches, dependency gates and a purposeful capstone. Preserve the reference's *principles*, not its quest IDs, coordinate values or arbitrary quest count.
 5. **Author safely.** Use existing ftbq.create_chapter, create_quest, add_task, add_reward and dependency tools. Use explicit staged transactions for coherent atomic changes. Always read and supply the latest expected_revision.
 6. **Validate.** Run ftbq.validate_book and ftbq.analyze_layout. Use compare_design_profiles to look for unexpected changes in the author's branch/merge structure and reward cadence.
-7. **Inspect the actual GUI.** Ask the user to open the finished chapter, then call ftbq.capture_view. Check visual hierarchy, readability, cluster balance and whether critical choices are clear. Do not invent feedback when no screenshot is available.
+7. **Inspect layout.** Call ftbq.render_chapter_map for a complete structural image first. For native theme/icon verification, have the user open FTBQ once and use ftbq.capture_chapter + ftbq.get_capture_result to temporarily auto-frame the target chapter. Check full_chapter_fits and preserve the distinction between a schematic and an actual framebuffer image. Do not invent visual feedback when native capture is unavailable.
 8. **Refine conservatively.** Use ftbq.move_quest/atomic operations for concrete problems. Re-read revisions, capture again and compare the result. Default to 2–3 iterations, stopping if further changes are speculative.
 
 ### Example instruction
