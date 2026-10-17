@@ -56,7 +56,7 @@ public final class QuestDesignAnalyzer {
             totalRewards += rewards.size();
             for (JsonElement t : tasks) countType(taskKinds, t);
             for (JsonElement r : rewards) countType(rewardKinds, r);
-            nodes.put(id, new Node(id, string(q, "title"), x, y, prerequisites, tasks.size(), rewards.size()));
+            nodes.put(id, new Node(id, string(q, "title"), string(q, "data_snbt"), x, y, prerequisites, tasks, rewards));
         }
 
         int externalPrerequisites = 0;
@@ -144,6 +144,7 @@ public final class QuestDesignAnalyzer {
 
         JsonArray phases = new JsonArray();
         for (Map.Entry<Integer, List<Node>> entry : stages.entrySet()) {
+            if (phases.size() >= 256) break;
             JsonObject phase = new JsonObject();
             phase.addProperty("depth", entry.getKey());
             phase.addProperty("quest_count", entry.getValue().size());
@@ -160,6 +161,12 @@ public final class QuestDesignAnalyzer {
                     item.addProperty("role", role(node));
                     item.addProperty("task_count", node.tasks);
                     item.addProperty("reward_count", node.rewards);
+                    item.addProperty("quest_data_excerpt", excerpt(node.data, 320));
+                    item.add("task_examples", sampleTypes(node.taskDetails, 2));
+                    item.add("reward_examples", sampleTypes(node.rewardDetails, 2));
+                    JsonArray dependencies = new JsonArray();
+                    node.parents.stream().limit(8).forEach(dependencies::add);
+                    item.add("local_prerequisites", dependencies);
                     sample.add(item);
                 }
                 if (node.parents.size() >= 2 || node.children.size() >= 2 || node.children.isEmpty()) {
@@ -291,6 +298,24 @@ public final class QuestDesignAnalyzer {
         return result;
     }
 
+    private static JsonArray sampleTypes(JsonArray details, int count) {
+        JsonArray examples = new JsonArray();
+        for (int i = 0; i < Math.min(count, details.size()); i++) {
+            JsonElement element = details.get(i);
+            if (!element.isJsonObject()) continue;
+            JsonObject v = element.getAsJsonObject();
+            JsonObject summary = new JsonObject();
+            summary.addProperty("type_id", string(v, "type_id"));
+            summary.addProperty("title", string(v, "title"));
+            summary.addProperty("data_excerpt", excerpt(string(v, "data_snbt"), 180));
+            examples.add(summary);
+        }
+        return examples;
+    }
+    private static String excerpt(String s, int max) {
+        return s.length() <= max ? s : s.substring(0, max) + "...[truncated]";
+    }
+
     private static String role(Node n) {
         if (n.parents.isEmpty()) return "entry";
         if (n.children.isEmpty()) return "terminal";
@@ -347,16 +372,19 @@ public final class QuestDesignAnalyzer {
     private static double round(double d) { return Math.round(d * 1000.0) / 1000.0; }
 
     private static final class Node {
-        final String id, title;
+        final String id, title, data;
         final double x, y;
-        final JsonArray dependencies;
+        final JsonArray dependencies, taskDetails, rewardDetails;
         final int tasks, rewards;
         final List<String> parents = new ArrayList<>();
         final List<String> children = new ArrayList<>();
         int stage;
-        Node(String id, String title, double x, double y, JsonArray dependencies, int tasks, int rewards) {
-            this.id = id; this.title = title; this.x = x; this.y = y;
-            this.dependencies = dependencies; this.tasks = tasks; this.rewards = rewards;
+        Node(String id, String title, String data, double x, double y, JsonArray dependencies,
+             JsonArray taskDetails, JsonArray rewardDetails) {
+            this.id = id; this.title = title; this.data = data; this.x = x; this.y = y;
+            this.dependencies = dependencies;
+            this.taskDetails = taskDetails; this.rewardDetails = rewardDetails;
+            this.tasks = taskDetails.size(); this.rewards = rewardDetails.size();
         }
     }
     private record Edge(Node start, Node end) {
