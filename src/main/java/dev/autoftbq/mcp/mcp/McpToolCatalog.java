@@ -90,6 +90,36 @@ public final class McpToolCatalog {
                 "Validate the live book after edits. Checks dependency cycles/depth, runtime task/reward type registration, and duplicate chapter/quest titles.",
                 obj(), List.of()));
 
+        // Design intelligence is read-only. The agent remains responsible for
+        // translating observed author intent into a new chapter, and must use the
+        // existing revision-guarded authoring tools for any change.
+        tools.add(tool("ftbq.get_layout_snapshot",
+                "Read an existing chapter's quest coordinates, dependency edges, task/reward types, titles and bounded raw SNBT examples. This is the reference for learning the author's actual progression logic.",
+                obj(p("chapter_id", str("Exact source chapter ID"))), List.of("chapter_id")));
+        tools.add(tool("ftbq.extract_design_profile",
+                "Analyze how an existing chapter teaches progression: entry gates, dependency stages, parallel branches, convergence milestones, reward rhythm, task types and geometry. Returns evidence, not a subjective AI conclusion.",
+                obj(
+                        p("chapter_id", str("Existing chapter ID to learn from")),
+                        p("minimum_spacing", number("Optional layout spacing diagnostic threshold, default 2.0"))
+                ), List.of("chapter_id")));
+        tools.add(tool("ftbq.compare_design_profiles",
+                "Read-only comparison between reference and new chapters. Surface structural differences in entry gates, branches, milestone convergence and reward pacing; do not assume identical quest counts are required.",
+                obj(
+                        p("reference_chapter_id", str("Existing chapter defining the reference philosophy")),
+                        p("candidate_chapter_id", str("New or edited chapter to compare")),
+                        p("minimum_spacing", number("Optional spacing threshold, default 2.0"))
+                ), List.of("reference_chapter_id", "candidate_chapter_id")));
+        tools.add(tool("ftbq.analyze_layout",
+                "Deterministic coordinate review for close/overlapping nodes, backwards dependencies and crossing lines. Visual confirmation still requires a screenshot.",
+                obj(
+                        p("chapter_id", str("Chapter to inspect")),
+                        p("minimum_spacing", number("Optional world-canvas spacing threshold, default 2.0"))
+                ), List.of("chapter_id")));
+        tools.add(tool("ftbq.capture_view",
+                "Capture the actual visible Minecraft FTB Quests screen and return MCP ImageContent plus metadata. FTBQ must be open. Does not pan/zoom, open screens or write quests; full-screen GUI frame may include overlays.",
+                obj(p("max_dimension", integer("Maximum long-edge pixels of screenshot, 512-2048; default 1600"))),
+                List.of()));
+
         JsonObject writeBase = obj(
                 p("expected_revision", str("Revision previously read from ftbq.get_context/get_book")),
                 p("proposal_id", str("Optional idempotency key; generate a stable UUID when retrying the same write"))
