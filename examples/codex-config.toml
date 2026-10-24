@@ -1,0 +1,12 @@
+# Example only.
+# Generate an exact Windows snippet with:
+# powershell -ExecutionPolicy Bypass -File tools/codex_config_snippet.ps1 -RuntimeFile "C:\path\to\minecraft\config\autoftbq-mcp\runtime.json"
+
+[mcp_servers.autoftbq]
+enabled = true
+required = false
+url = "http://127.0.0.1:25598/mcp"
+http_headers_helper = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"C:\\path\\to\\AutoFTBQ-MCP\\tools\\codex_headers.ps1\" -RuntimeFile \"C:\\path\\to\\minecraft\\config\\autoftbq-mcp\\runtime.json\""
+startup_timeout_sec = 10
+tool_timeout_sec = 60
+default_tools_approval_mode = "writes"

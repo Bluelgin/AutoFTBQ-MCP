@@ -1,0 +1,58 @@
+name: build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  forge-1-20-1-ftbq-2001:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v5
+      - name: Check architecture boundaries
+        run: python scripts/check-architecture.py
+      - name: Test Codex header helpers
+        shell: pwsh
+        run: |
+          $runtime = Join-Path $env:RUNNER_TEMP "autoftbq-runtime.json"
+          '{"url":"http://127.0.0.1:25598/mcp","token":"ci-test-token"}' | Set-Content -LiteralPath $runtime -Encoding UTF8
+
+          $headers = & ./tools/codex_headers.ps1 -RuntimeFile $runtime
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $parsed = $headers | ConvertFrom-Json
+          if ($parsed.Authorization -ne "Bearer ci-test-token") {
+            throw "PowerShell Codex header helper returned an unexpected Authorization header"
+          }
+
+          $snippet = & ./tools/codex_config_snippet.ps1 -RuntimeFile $runtime
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($snippet -notmatch 'http_headers_helper' -or $snippet -notmatch 'default_tools_approval_mode = "writes"') {
+            throw "Codex config generator did not emit the expected MCP configuration"
+          }
+
+          $pythonHeaders = python ./tools/codex_headers.py $runtime
+          $pythonParsed = $pythonHeaders | ConvertFrom-Json
+          if ($pythonParsed.Authorization -ne "Bearer ci-test-token") {
+            throw "Python Codex header helper returned an unexpected Authorization header"
+          }
+      - name: Build
+        run: ./gradlew build --stacktrace
+      - name: Upload mod jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: autoftbq-mcp-forge-1.20.1
+          path: build/libs/*.jar
+          if-no-files-found: error

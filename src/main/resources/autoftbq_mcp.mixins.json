@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.autoftbq.mcp.compat.ftbq.v2001.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "client": [
+    "QuestScreenAccessor",
+    "QuestButtonAccessor",
+    "ChapterButtonAccessor",
+    "QuestButtonMcpContextMixin",
+    "ChapterButtonMcpContextMixin",
+    "QuestPanelMcpContextMixin"
+  ],
+  "injectors": {"defaultRequire": 1}
+}

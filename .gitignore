@@ -1,0 +1,8 @@
+.gradle/
+build/
+run/
+run-server/
+.idea/
+*.iml
+out/
+config/autoftbq-mcp/runtime.json
