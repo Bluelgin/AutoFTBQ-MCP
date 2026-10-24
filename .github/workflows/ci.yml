@@ -24,6 +24,8 @@ jobs:
         uses: gradle/actions/wrapper-validation@v5
       - name: Check architecture boundaries
         run: python scripts/check-architecture.py
+      - name: Check porting manifest and MIT metadata
+        run: python scripts/check-porting-metadata.py
       - name: Test Codex header helpers
         shell: pwsh
         run: |

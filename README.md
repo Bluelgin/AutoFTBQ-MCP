@@ -1,5 +1,10 @@
 # AutoFTBQ MCP
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+> **Community AI porting / 社区 AI 移植** — Need Fabric, NeoForge or another Minecraft version? See [AGENTS.md](AGENTS.md), [AI porting workflow](docs/AI_PORTING.md), [technical porting guide](docs/PORTING_GUIDE.md), and [compatibility targets](porting/targets.yml). Ask your coding AI to inspect these files and check existing PRs, then **ask before implementing or submitting a PR**. The current implemented baseline is Forge 1.20.1; additional targets are only proposals until verified. [Request a port](https://github.com/Bluelgin/AutoFTBQ-MCP/issues/new/choose).
+
+
 AutoFTBQ MCP turns a running Minecraft + FTB Quests client into a local **Model Context Protocol server** for AI agents.
 
 The goal is not just remote CRUD. The runtime exposes live game facts, FTB Quests context, version-aware type discovery, and server-authoritative quest editing with revision guards, snapshot rollback, undo, idempotency, and live synchronization back into the native FTB Quests UI.
@@ -256,8 +261,8 @@ python tools/mcp_smoke.py --runtime /path/to/instance/config/autoftbq-mcp/runtim
 
 ## Status
 
-This repository is an early architecture/bootstrap branch of the AutoFTBQ MCP direction. The 1.20.1/2001 compatibility slice is the implementation baseline; additional loader/version modules should only be marked supported after they compile and pass game smoke tests.
+This repository contains the initial AutoFTBQ MCP implementation and is open to human-reviewed, AI-assisted community ports. The 1.20.1/2001 compatibility slice is the implementation baseline; additional loader/version modules should only be marked supported after they compile and pass game smoke tests.
 
 ## License
 
-GPL-3.0-only.
+MIT for project-owned code (see [LICENSE](LICENSE), [CONTRIBUTING.md](CONTRIBUTING.md) and [license history](docs/LICENSE_HISTORY.md)); third-party dependencies retain their own terms.

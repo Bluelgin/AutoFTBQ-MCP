@@ -1,0 +1,34 @@
+# Flat YAML fields, validated without external Python dependencies.
+# A target is not supported merely because its build succeeded.
+schema_version: 1
+targets:
+  - id: forge-1.20.1-ftbq-2001
+    minecraft: "1.20.1"
+    loader: forge
+    ftb_quests: "2001.x"
+    java: "17"
+    status: implemented
+    build: passed
+    game_smoke: pending
+    build_path: "."
+    evidence: "https://github.com/Bluelgin/AutoFTBQ-MCP/actions/runs/39036510023"
+  - id: fabric-1.20.1-ftbq-2001
+    minecraft: "1.20.1"
+    loader: fabric
+    ftb_quests: "2001.x"
+    java: "17"
+    status: proposed
+    build: not_run
+    game_smoke: not_run
+    build_path: none
+    evidence: none
+  - id: neoforge-1.21.1-ftbq-tbd
+    minecraft: "1.21.1"
+    loader: neoforge
+    ftb_quests: unknown
+    java: unknown
+    status: proposed
+    build: not_run
+    game_smoke: not_run
+    build_path: none
+    evidence: none

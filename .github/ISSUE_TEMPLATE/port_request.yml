@@ -1,0 +1,49 @@
+name: Port request
+description: Request a new Minecraft / loader / FTB Quests combination.
+title: "[Port request] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read porting/targets.yml and check existing issues or PRs first. A request does not imply compatibility or authorize an AI to edit code.
+  - type: input
+    id: minecraft
+    attributes:
+      label: Minecraft version
+      placeholder: "1.20.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: loader
+    attributes:
+      label: Mod loader
+      options:
+        - Fabric
+        - Forge
+        - NeoForge
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: ftbq
+    attributes:
+      label: FTB Quests version or unknown
+    validations:
+      required: true
+  - type: textarea
+    id: requirements
+    attributes:
+      label: Use case, dependencies and relevant links
+    validations:
+      required: true
+  - type: textarea
+    id: existing
+    attributes:
+      label: Related ports, branches, PRs or issues
+  - type: checkboxes
+    id: acknowledgment
+    attributes:
+      label: Acknowledgment
+      options:
+        - label: I understand this is a request, not a supported build.
+          required: true

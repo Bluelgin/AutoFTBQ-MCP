@@ -121,3 +121,7 @@ Protocol support is isolated from Minecraft compatibility. A future MCP revision
 10. run game smoke tests before marking the target supported
 
 Do not copy a transaction executor to a new generation and assume `readNetDataFull/writeNetDataFull` semantics are unchanged.
+
+## AI-assisted community contributions
+
+Unsupported versions are candidates, not promised builds. Read [AGENTS.md](../AGENTS.md), [AI_PORTING.md](AI_PORTING.md), [PORTING_GUIDE.md](PORTING_GUIDE.md), and [targets.yml](../porting/targets.yml). The manifest records the proposed/implemented/experimental/supported status of individual version tuples. Only a build **and documented game smoke test** justify supported status; maintainers still review all pull requests. Coding agents must obtain appropriate user authorization before changes and separately before PR submission; they must not auto-merge ports.
