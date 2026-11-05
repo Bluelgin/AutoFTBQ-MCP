@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.autoftbq.mcp.client.ClientThread;
+import dev.autoftbq.mcp.creator.CreatorBlueprintCompiler;
 import dev.autoftbq.mcp.compat.CompatibilityManager;
 import dev.autoftbq.mcp.compat.ftbq.FtbqClientAdapter;
 import dev.autoftbq.mcp.platform.GamePlatform;
@@ -25,6 +26,9 @@ public final class McpToolService {
         final JsonObject arguments = args == null ? new JsonObject() : args;
         return switch (name) {
             case "autoftbq.health" -> health();
+            case "autoftbq.creator_context" -> creatorContext();
+            case "autoftbq.creator_preview" -> CreatorBlueprintCompiler.compile(requiredObject(arguments, "blueprint")).preview();
+            case "autoftbq.creator_apply" -> creatorApply(arguments);
             case "minecraft.capabilities" -> client(() -> adapter().query("inspect_game_data", withKind(new JsonObject(), "capabilities")));
             case "minecraft.search_registry" -> searchRegistry(arguments);
             case "minecraft.validate_ids" -> validateIds(arguments);
@@ -83,6 +87,59 @@ public final class McpToolService {
             case "ftbq.transaction_abort" -> transactions.abort(required(arguments, "transaction_id"));
             default -> error("unknown_tool", "Unknown tool: " + name);
         };
+    }
+
+    private JsonObject creatorContext() {
+        return client(() -> {
+            JsonObject result = new JsonObject();
+            var current = adapter();
+            JsonObject book = current.book();
+            if (book.has("status") && !"ok".equals(book.get("status").getAsString())) return book;
+            result.addProperty("status", "ok");
+            result.add("context", current.context());
+            result.add("book", book);
+            result.add("game_data_coverage", current.query("inspect_game_data", withKind(new JsonObject(), "capabilities")));
+            result.addProperty("hint", "Choose a chapter goal using actual loaded facts. Verify item IDs and recipes; registered does not mean obtainable.");
+            return result;
+        });
+    }
+
+    private JsonObject creatorApply(JsonObject request) {
+        if (!request.has("confirm") || !request.get("confirm").isJsonPrimitive()
+                || !request.get("confirm").getAsBoolean()) {
+            return error("invalid_argument", "Creator apply requires explicit confirm=true after preview review");
+        }
+        CreatorBlueprintCompiler.Compiled plan =
+                CreatorBlueprintCompiler.compile(requiredObject(request, "blueprint"));
+        String expectedHash = required(request, "preview_hash");
+        if (!plan.preview().get("preview_hash").getAsString().equals(expectedHash)) {
+            return error("conflict", "Blueprint differs from the reviewed creator_preview; preview again before applying");
+        }
+        // Do not silently accept invented IDs. Registry membership is only a
+        // prerequisite, not proof of survival obtainable content.
+        for (int offset = 0; offset < plan.itemIds().size(); offset += 64) {
+            JsonObject query = new JsonObject();
+            query.addProperty("registry", "item");
+            JsonArray ids = new JsonArray();
+            for (int i = offset; i < Math.min(offset + 64, plan.itemIds().size()); i++) {
+                ids.add(plan.itemIds().get(i));
+            }
+            query.add("ids", ids);
+            JsonObject validation = client(() -> adapter().query("validate_registry_ids", query));
+            if (!validation.has("results") || !validation.get("results").isJsonArray()
+                    || validation.getAsJsonArray("results").size() != ids.size()) {
+                return error("unavailable", "Could not validate item IDs against the live game registry");
+            }
+            for (JsonElement item : validation.getAsJsonArray("results")) {
+                JsonObject value = item.getAsJsonObject();
+                if (!value.has("exists") || !value.get("exists").getAsBoolean()) {
+                    return error("invalid_argument", "Unknown item ID in blueprint: " + value.get("id").getAsString());
+                }
+            }
+        }
+        JsonObject result = commit(request, plan.operations());
+        result.addProperty("creator_preview_hash", expectedHash);
+        return result;
     }
 
     private JsonObject health() {

@@ -39,7 +39,9 @@ public record ToolDefinition(String name, String description, JsonObject inputSc
         // ephemeral FTBQ view, so those tools are not truly read-only even
         // though they never change the quest book.
         if (name.equals("ftbq.capture_chapter") || name.equals("ftbq.cancel_capture")) return false;
-        return name.equals("autoftbq.health")
+        return name.equals("autoftbq.creator_context")
+                || name.equals("autoftbq.creator_preview")
+                || name.equals("autoftbq.health")
                 || name.startsWith("minecraft.")
                 || name.startsWith("ftbq.get_")
                 || name.startsWith("ftbq.list_")

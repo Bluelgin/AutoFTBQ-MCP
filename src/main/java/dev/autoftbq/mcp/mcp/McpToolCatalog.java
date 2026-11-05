@@ -16,6 +16,24 @@ public final class McpToolCatalog {
                 "Report Minecraft/loader/FTB Quests compatibility, adapter capabilities and server edit permission.",
                 obj(), List.of()));
 
+        // Wish/Creator facade: a small number of intent-level tools, not another agent runtime.
+        tools.add(tool("autoftbq.creator_context",
+                "Summarize currently loaded quest-book and selection context for a wish-based creator agent. No gameplay discovery is guaranteed.",
+                obj(), List.of()));
+        tools.add(tool("autoftbq.creator_preview",
+                "Validate and auto-layout a proposed NEW chapter blueprint without writing game data. Returns a compact plan and preview_hash; no AI is embedded.",
+                obj(p("blueprint", objectAny("Blueprint: chapter {title,subtitle?,icon?,group_id?}, quests [{key,title,subtitle?,description?,icon?,depends_on?:[local keys],tasks?:[{kind:item|checkmark|xp,...}],rewards?:[{kind:item|xp|xp_levels,...}]}]"))),
+                List.of("blueprint")));
+        tools.add(tool("autoftbq.creator_apply",
+                "After user review, compile the SAME blueprint again and atomically create its chapter and quests. Requires confirm=true, preview_hash and current expected_revision. Item IDs are checked against the live registry; server permissions and rollback still apply.",
+                obj(
+                        p("blueprint", objectAny("Exact same blueprint previously passed to creator_preview")),
+                        p("preview_hash", str("SHA-256 plan hash from creator_preview")),
+                        p("expected_revision", str("Latest FTBQ book revision")),
+                        p("confirm", bool("Explicit user approval of this preview (must be true)")),
+                        p("proposal_id", str("Optional stable idempotency ID for retries"))
+                ), List.of("blueprint", "preview_hash", "expected_revision", "confirm")));
+
         tools.add(tool("minecraft.capabilities",
                 "Describe live game-data coverage and explicit unknown areas. Call this before claiming complete modpack coverage.",
                 obj(), List.of()));
