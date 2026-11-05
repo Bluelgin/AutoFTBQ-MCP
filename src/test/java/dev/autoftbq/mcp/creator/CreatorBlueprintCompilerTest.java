@@ -107,8 +107,14 @@ class CreatorBlueprintCompilerTest {
             JsonArray tasks = new JsonArray();
             JsonArray rewards = new JsonArray();
             for (int j = 0; j < 8; j++) {
-                tasks.add(JsonParser.parseString("{\\"kind\\":\\"item\\",\\"item_id\\":\\"minecraft:oak_log\\"}"));
-                rewards.add(JsonParser.parseString("{\\"kind\\":\\"xp\\",\\"amount\\":1}"));
+                JsonObject task = new JsonObject();
+                task.addProperty("kind", "item");
+                task.addProperty("item_id", "minecraft:oak_log");
+                tasks.add(task);
+                JsonObject reward = new JsonObject();
+                reward.addProperty("kind", "xp");
+                reward.addProperty("amount", 1);
+                rewards.add(reward);
             }
             quest.add("tasks", tasks);
             quest.add("rewards", rewards);
