@@ -97,7 +97,17 @@ public final class McpToolService {
             if (book.has("status") && !"ok".equals(book.get("status").getAsString())) return book;
             result.addProperty("status", "ok");
             result.add("context", current.context());
-            result.add("book", book);
+            // Keep the Creator overview compact. The ordinary get_book result
+            // includes raw reward-table SNBT, which is unnecessary for a wish
+            // and can consume a large fraction of the agent's context window.
+            JsonObject summary = new JsonObject();
+            if (book.has("book_revision")) summary.add("book_revision", book.get("book_revision").deepCopy());
+            if (book.has("can_edit")) summary.add("can_edit", book.get("can_edit").deepCopy());
+            if (book.has("chapter_groups")) summary.add("chapter_groups", book.get("chapter_groups").deepCopy());
+            if (book.has("reward_tables") && book.get("reward_tables").isJsonArray()) {
+                summary.addProperty("reward_table_count", book.getAsJsonArray("reward_tables").size());
+            }
+            result.add("book", summary);
             result.add("game_data_coverage", current.query("inspect_game_data", withKind(new JsonObject(), "capabilities")));
             result.addProperty("hint", "Choose a chapter goal using actual loaded facts. Verify item IDs and recipes; registered does not mean obtainable.");
             return result;

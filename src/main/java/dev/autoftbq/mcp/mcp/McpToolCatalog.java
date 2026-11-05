@@ -18,7 +18,7 @@ public final class McpToolCatalog {
 
         // Wish/Creator facade: a small number of intent-level tools, not another agent runtime.
         tools.add(tool("autoftbq.creator_context",
-                "Summarize currently loaded quest-book and selection context for a wish-based creator agent. No gameplay discovery is guaranteed.",
+                "Compact overview of loaded chapters, selected quests and data coverage (omits raw reward-table SNBT). No gameplay discovery is guaranteed.",
                 obj(), List.of()));
         tools.add(tool("autoftbq.creator_preview",
                 "Validate and auto-layout a proposed NEW chapter blueprint without writing game data. Returns a compact plan and preview_hash; no AI is embedded.",
