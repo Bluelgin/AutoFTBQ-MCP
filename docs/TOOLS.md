@@ -19,6 +19,14 @@ Common status values include:
 
 A missing capability or unknown coverage must not be converted into a claim that game content does not exist.
 
+## Wish-based Creator facade
+
+- `autoftbq.creator_context` reads currently loaded FTBQ book, current selection, and game-data coverage. It does **not** claim full knowledge of the pack.
+- `autoftbq.creator_preview(blueprint)` validates one new-chapter blueprint, lays it out by dependency depth, detects cycles and returns a compact map, warnings and `preview_hash`. No game edits.
+- `autoftbq.creator_apply(blueprint, preview_hash, expected_revision, confirm, proposal_id?)` requires the exact reviewed plan, a fresh revision, and explicit confirmation. It checks exact item IDs against the loaded registry then applies one server-authoritative atomic batch. No modifications to existing chapters are supported by this facade.
+
+See [Creator guide](CREATOR.md) for schema, safety boundaries and example. The external AI must design the chapter; this is not a natural-language-to-model server.
+
 ## Game knowledge
 
 ### minecraft.capabilities

@@ -1,0 +1,28 @@
+{
+  "chapter": {
+    "title": "First Steps",
+    "subtitle": "A small survival tutorial",
+    "icon": "minecraft:crafting_table"
+  },
+  "quests": [
+    {
+      "key": "gather",
+      "title": "Gather Oak Logs",
+      "description": "Collect eight oak logs.",
+      "tasks": [{"kind": "item", "item_id": "minecraft:oak_log", "count": 8}],
+      "rewards": [{"kind": "xp_levels", "amount": 1}]
+    },
+    {
+      "key": "craft",
+      "title": "Your First Crafting Table",
+      "depends_on": ["gather"],
+      "tasks": [{"kind": "item", "item_id": "minecraft:crafting_table", "count": 1}]
+    },
+    {
+      "key": "explore",
+      "title": "Choose Your Next Adventure",
+      "depends_on": ["craft"],
+      "tasks": [{"kind": "checkmark"}]
+    }
+  ]
+}
