@@ -156,6 +156,12 @@ public final class CreatorBlueprintCompiler {
                 edgeCount++;
             }
         }
+        // Forge's proposal packet has a 262,144-character JSON ceiling and
+        // the FTBQ executor permits at most 1000 operations. Reject oversized
+        // wishes here instead of displaying an impossible-to-commit preview.
+        if (operations.size() > 1000 || operations.toString().length() > 200_000) {
+            throw invalid("compiled blueprint exceeds the safe single-transaction limit; split it into smaller chapters");
+        }
         JsonObject preview = new JsonObject();
         preview.addProperty("status", "ok");
         preview.addProperty("chapter_title", chapterTitle);

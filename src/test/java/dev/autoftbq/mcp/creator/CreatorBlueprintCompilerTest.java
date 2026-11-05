@@ -98,6 +98,29 @@ class CreatorBlueprintCompilerTest {
     }
 
     @Test
+    void compilerRejectsBlueprintsTooLargeForServerOperationLimit() {
+        JsonObject source = blueprint("[]");
+        for (int i = 0; i < CreatorBlueprintCompiler.MAX_QUESTS; i++) {
+            JsonObject quest = new JsonObject();
+            quest.addProperty("key", "q" + i);
+            quest.addProperty("title", "Quest " + i);
+            JsonArray tasks = new JsonArray();
+            JsonArray rewards = new JsonArray();
+            for (int j = 0; j < 8; j++) {
+                tasks.add(JsonParser.parseString("{\\"kind\\":\\"item\\",\\"item_id\\":\\"minecraft:oak_log\\"}"));
+                rewards.add(JsonParser.parseString("{\\"kind\\":\\"xp\\",\\"amount\\":1}"));
+            }
+            quest.add("tasks", tasks);
+            quest.add("rewards", rewards);
+            JsonArray deps = new JsonArray();
+            for (int j = 0; j < Math.min(i, 12); j++) deps.add("q" + j);
+            quest.add("depends_on", deps);
+            source.getAsJsonArray("quests").add(quest);
+        }
+        assertThrows(IllegalArgumentException.class, () -> CreatorBlueprintCompiler.compile(source));
+    }
+
+    @Test
     void blueprintHasStrictSizeAndWorkBounds() {
         JsonObject input = blueprint("[{\"key\":\"a\",\"title\":\"A\"}]");
         for (int i = 0; i < CreatorBlueprintCompiler.MAX_QUESTS; i++) {
