@@ -10,6 +10,7 @@ import dev.ftb.mods.ftbquests.quest.reward.Reward;
 import dev.ftb.mods.ftbquests.quest.task.Task;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -68,7 +69,7 @@ public final class FTBQ2001CompactSnapshot {
             entry.addProperty("dependencies_truncated", deps.size() > MAX_DEPENDENCIES);
 
             JsonArray tasks = new JsonArray();
-            List<Task> allTasks = quest.getTasks();
+            Collection<Task> allTasks = quest.getTasks();
             allTasks.stream().limit(MAX_OBJECTS_PER_QUEST).forEach(t -> {
                 JsonObject item = new JsonObject();
                 item.addProperty("id", t.getCodeString());
@@ -81,7 +82,7 @@ public final class FTBQ2001CompactSnapshot {
             entry.addProperty("tasks_truncated", allTasks.size() > MAX_OBJECTS_PER_QUEST);
 
             JsonArray rewards = new JsonArray();
-            List<Reward> allRewards = quest.getRewards();
+            Collection<Reward> allRewards = quest.getRewards();
             allRewards.stream().limit(MAX_OBJECTS_PER_QUEST).forEach(r -> {
                 JsonObject item = new JsonObject();
                 item.addProperty("id", r.getCodeString());
