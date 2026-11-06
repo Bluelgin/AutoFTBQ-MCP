@@ -31,9 +31,9 @@ class CreatorBlueprintCompilerTest {
         assertEquals("ok", summary.get("status").getAsString());
         assertEquals(4, summary.get("quest_count").getAsInt());
         assertEquals(4, summary.get("task_count").getAsInt());
-        assertEquals(3, summary.get("dependency_count").getAsInt());
+        assertEquals(4, summary.get("dependency_count").getAsInt());
         assertEquals(1, summary.get("reward_count").getAsInt());
-        assertEquals(13, summary.get("operation_count").getAsInt());
+        assertEquals(14, summary.get("operation_count").getAsInt());
         assertEquals(64, summary.get("preview_hash").getAsString().length());
         assertEquals("create_chapter", compiled.operations().get(0).getAsJsonObject().get("kind").getAsString());
         assertEquals("creator.chapter", compiled.operations().get(1).getAsJsonObject().get("chapter_id").getAsString());
