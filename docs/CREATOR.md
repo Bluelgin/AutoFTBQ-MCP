@@ -1,4 +1,4 @@
-# AutoFTBQ Creator: wish-to-quest MVP
+# AutoFTBQ Creator: wish-to-quest (compact + full blueprints)
 
 The **Creator workflow** reduces prompt engineering: users state an outcome, an external MCP-capable agent studies the loaded game and proposes a quest blueprint, and the mod converts the blueprint into deterministic, revision-guarded FTBQ operations. No LLM SDK, credentials or prompt loop run inside the mod.
 
@@ -17,8 +17,8 @@ The agent calls `autoftbq.creator_context` to learn what book is loaded and wher
 | Tool | Meaning | Side effects |
 | --- | --- | --- |
 | `autoftbq.creator_context` | One-stop read of selection, book summary and coverage (not complete knowledge of all mods) | None |
-| `autoftbq.creator_preview` | Validate blueprint, detect cycles/unknown dependencies and auto-layout. Returns compact counts, coordinates, warnings and a `preview_hash` | None; works offline |
-| `autoftbq.creator_apply` | Validate item registry IDs and atomically write **new chapter only**, using the same compiled plan | Writes with existing FTBQ editor permission, expected revision, snapshot/rollback and idempotent proposal ID |
+| `autoftbq.creator_preview` | Validate full or compact blueprint, detect cycles and auto-layout. Returns a preview hash and short-lived `draft_id` | No quest-book writes; works offline |
+| `autoftbq.creator_apply` | Apply a reviewed `draft_id` or resubmit identical full/compact blueprint; validate live IDs and atomically create **new chapter only** | Server permission, expected revision, snapshot/rollback and idempotency remain required |
 
 There is **no tool that accepts only free-form natural-language text and secretly invokes a second model**. The external agent remains responsible for creative planning. AutoFTBQ executes verified, deterministic operations.
 
@@ -75,6 +75,8 @@ The preview hash is derived from canonical compiled operations and rejects a cha
 
 4. Validate the book and inspect its chapter map. Do not claim that structural checks prove obtainable content or that a schematic is a native screenshot.
 
+For lower request sizes, apply the saved preview using `draft_id` **instead of** the full `blueprint`. The draft is held in memory only (10-minute TTL, max 16 recent drafts, cleared on restart). Specify exactly one of `draft_id` and `blueprint` in `creator_apply`; always pass `preview_hash`, `expected_revision` and `confirm=true`. The preview hash and draft ID are not substitutes for human review or FTBQ server authorization.
+
 ## Scope and known limitations
 
 - **Additive-only MVP:** creates one new chapter, not patching or deleting existing chapters. A blank/small chapter is a safe default, not proof of gameplay quality.
@@ -88,3 +90,72 @@ The preview hash is derived from canonical compiled operations and rejects a cha
 Automated JUnit tests cover deterministic layout, hashes, local key references, cycles, bad inputs, task bounds and supported object conversion. They do not require a Minecraft runtime.
 
 Manual in-game acceptance: connect an agent, generate a new chapter from a one-sentence wish, inspect preview, explicitly approve, check game sync, task icons, dependency layout, quest usability, revision-conflict handling, unknown ID rejection and safe undo. Test both singleplayer and a permissioned dedicated server before declaring full runtime support.
+
+
+## Compact item-first blueprint (optional)
+
+The full blueprint schema above remains unchanged. For simple item tasks,
+set `chapter` to a **string**; the Creator normalizer expands it to the
+existing strict full blueprint and safe operation executor.
+
+~~~json
+{
+  "chapter": "Create Basics",
+  "quests": [
+    {"id": "alloy", "get": "create:andesite_alloy", "n": 8},
+    {"id": "press", "get": "create:mechanical_press", "after": "alloy",
+     "give": "minecraft:iron_ingot", "give_n": 2}
+  ]
+}
+~~~
+
+- `chapter`: nonempty chapter title; optional top-level `subtitle`, `icon`
+  and `group_id` are forwarded to the full blueprint.
+- `quests[].id`: unique local quest key. `title`, `desc` and `icon` are optional.
+  `desc` accepts text or an array of text lines.
+- `get`: item ID for a single task; `n` defaults to 1. Omitting `get`
+  produces the same warned manual-checkmark as a full blueprint.
+- `after`: one prerequisite local quest key or an array; layout is unchanged.
+- `give`: optional item reward ID; `give_n` defaults to 1.
+- Without `title`, a readable fallback is inferred from the item path.
+  It is **not** a guaranteed localized name or polished quest title.
+- Compact input does **not** accept raw SNBT, commands, multiple tasks,
+  XP rewards or addon-specific types. Use the full blueprint or existing
+  permission-checked low-level FTBQ tools for advanced requirements.
+- Full compiler limits, syntax checks, dependency checks and hashes still
+  apply. Runtime ID existence is checked on apply; obtainability remains unknown.
+
+## Bounded local item lookup
+
+Call `minecraft.search_items` with an item ID substring or localized display-name
+substring and/or a mod namespace (e.g. `create`). A client-local index builds
+lazily and returns **at most 30 candidates per call**, with exact IDs and
+display names. Names refresh when runtime data or language changes. Avoid
+dumping a complete modpack registry into the model's context.
+
+Registration is **not** proof of survival obtainability. Inspect recipes and
+mechanics selectively with `minecraft.search_recipes` and `minecraft.inspect_item`.
+Use verified fully qualified item IDs in the blueprint.
+
+## Efficient preview/apply example
+
+1. Search relevant items with `minecraft.search_items`.
+2. Send the compact blueprint to `autoftbq.creator_preview`.
+3. Show the warnings and goals; obtain explicit human approval.
+4. Read a **fresh** FTBQ revision and apply only the reviewed draft:
+
+~~~json
+{
+  "draft_id": "<draft_id from creator_preview>",
+  "preview_hash": "<preview_hash from creator_preview>",
+  "expected_revision": "<fresh book_revision>",
+  "confirm": true,
+  "proposal_id": "<stable id for identical retries>"
+}
+~~~
+
+The legacy apply-by-blueprint path remains supported. A missing or expired draft
+must be previewed again; it is never silently regenerated into an unreviewed plan.
+
+Payload size is not the same as actual LLM Token consumption. See
+[Creator evaluation](CREATOR_EVAL.md) for measurement.

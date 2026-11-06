@@ -120,8 +120,8 @@ See the complete [Codex connection guide](docs/CODEX.md).
 Players can ask a connected AI agent for a new quest chapter in one sentence; the agent inspects live evidence and proposes an automatically laid-out blueprint. The mod itself does **not** run an AI model.
 
 - `autoftbq.creator_context`: convenient book/selection/coverage overview.
-- `autoftbq.creator_preview`: validates and auto-layouts a new-chapter blueprint without changing the game; returns a preview hash.
-- `autoftbq.creator_apply`: requires that exact preview hash, fresh book revision and explicit confirmation; atomically creates the chapter through existing server permission/snapshot/rollback.
+- `autoftbq.creator_preview`: validates full or compact item-first blueprints and auto-layouts the chapter; returns preview hash + short-lived in-memory draft ID.
+- `autoftbq.creator_apply`: accepts the reviewed draft ID **or** original blueprint, plus preview hash, fresh revision and confirmation; uses existing atomic server permission/snapshot/rollback.
 - `skills/autoftbq-creator/SKILL.md`: portable agent workflow for short user wishes.
 
 See [Creator guide](docs/CREATOR.md) and [evaluation protocol](docs/CREATOR_EVAL.md). Registry checks do not prove survival obtainability; runtime gameplay acceptance is still required.
@@ -132,6 +132,7 @@ Game knowledge:
 
 - `minecraft.capabilities`
 - `minecraft.search_registry`
+- `minecraft.search_items` (local indexed lookup, up to 30 ID/name matches per call)
 - `minecraft.validate_ids`
 - `minecraft.inspect_item`
 - `minecraft.search_recipes`

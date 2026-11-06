@@ -29,3 +29,29 @@ Suggested neutral prompts:
 A run **passes** only if it is structurally valid **and** a human verifies that the quests are playable for that modpack. Report `passes/attempts` as WQSR, plus median token cost and manual edits. Never mark unknown gameplay mechanics as passed. Keep at least three trials per prompt, or explicitly mark results exploratory.
 
 This document is a measurement plan; it does not include fabricated performance numbers.
+
+
+## Creator compact + draft evaluation
+
+Compare three implementations on identical prompts, game state, model,
+tool schema visibility and agent settings:
+
+1. Baseline individual FTBQ write tools.
+2. Original Creator full JSON blueprint submitted to preview **and** apply.
+3. Compact item blueprint + bounded item search + draft-ID apply.
+
+Use test chapters with 10, 30 and 48 quests. Repeat at least three times
+per condition. Record:
+
+- Actual prompt/input and output **tokens** as reported by the Harness,
+  including tool definitions, tool responses and retries where available.
+- MCP call counts, response bytes, retries, latency, client memory/CPU.
+- Atomic commit success, game save/reload, UI quality, player manual edits.
+- ID correctness, recipe evidence, gameplay obtainability and unknowns.
+- A reproducible synthetic JSON byte-size estimate from
+  `tools/creator_payload_probe.py`, **never as measured tokens** or
+  proof of cost reduction.
+
+MCP clients may consume a text copy, structuredContent, or both; tool catalog
+sizes and prompt caching also affect real context cost. Schema-only unit tests
+cannot establish WQSR or actual gameplay success.
