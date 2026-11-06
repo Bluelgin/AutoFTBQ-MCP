@@ -12,6 +12,8 @@ import dev.autoftbq.mcp.platform.ProposalApplicationResult;
 import dev.autoftbq.mcp.platform.ProposalUndoResult;
 import dev.autoftbq.mcp.platform.ServerSecurityState;
 import dev.autoftbq.mcp.transaction.TransactionStagingService;
+import dev.autoftbq.mcp.review.OperationReviewPlanner;
+import dev.autoftbq.mcp.review.ReviewDraftStore;
 
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -20,6 +22,7 @@ import java.util.function.Supplier;
 
 public final class McpToolService {
     private final TransactionStagingService transactions = new TransactionStagingService();
+    private final ReviewDraftStore reviewDrafts = new ReviewDraftStore();
 
     public JsonObject invoke(String name, JsonObject args) {
         final JsonObject arguments = args == null ? new JsonObject() : args;
@@ -35,6 +38,7 @@ public final class McpToolService {
             case "ftbq.get_context" -> client(() -> adapter().context());
             case "ftbq.get_book" -> client(() -> adapter().book());
             case "ftbq.get_chapter" -> client(() -> adapter().chapter(required(arguments, "id")));
+            case "ftbq.get_chapter_snapshot" -> client(() -> adapter().query("compact_chapter_snapshot", arguments.deepCopy()));
             case "ftbq.get_quest" -> client(() -> adapter().quest(required(arguments, "id")));
             case "ftbq.get_object" -> client(() -> adapter().object(required(arguments, "id")));
             case "ftbq.list_task_types" -> client(() -> adapter().listTypes("task"));
@@ -74,6 +78,8 @@ public final class McpToolService {
             case "ftbq.disconnect_quests" -> commitSingle(arguments, removeDependency(arguments));
             case "ftbq.apply_dependency_plan" -> commit(arguments, dependencyPlan(arguments));
             case "ftbq.apply_operations" -> commit(arguments, requiredArray(arguments, "operations"));
+            case "ftbq.preview_operations" -> previewOperations(arguments);
+            case "ftbq.apply_preview" -> applyPreview(arguments);
             case "ftbq.undo_last" -> undo(arguments);
 
             case "ftbq.transaction_begin" -> transactions.begin();
@@ -137,6 +143,66 @@ public final class McpToolService {
         } catch (Exception error) {
             return error("unavailable", safe(error));
         }
+    }
+
+
+    private JsonObject previewOperations(JsonObject request) {
+        String revision = required(request, "expected_revision");
+        JsonArray operations = requiredArray(request, "operations").deepCopy();
+        // Entire read + target lookup happens on the game client thread.
+        return client(() -> {
+            FtbqClientAdapter game = adapter();
+            JsonObject context = game.context();
+            if (!context.has("status") || !"ok".equals(context.get("status").getAsString())) {
+                return context;
+            }
+            String currentRevision = context.get("book_revision").getAsString();
+            if (!revision.equals(currentRevision)) {
+                return error("conflict", "Client quest book changed; read a fresh revision and preview again");
+            }
+            try {
+                OperationReviewPlanner.Plan plan = OperationReviewPlanner.prepare(
+                        operations, revision, currentRevision,
+                        (type, id) -> switch (type) {
+                            case "quest" -> game.quest(id);
+                            case "chapter" -> game.chapter(id);
+                            case "object" -> game.object(id);
+                            default -> error("invalid_argument", "Unsupported preview target");
+                        });
+                ReviewDraftStore.Ticket ticket = reviewDrafts.store(plan);
+                JsonObject result = plan.preview().deepCopy();
+                result.addProperty("draft_id", ticket.id());
+                result.addProperty("draft_ttl_seconds", ticket.ttlSeconds());
+                result.addProperty("can_edit", context.has("can_edit") && context.get("can_edit").getAsBoolean());
+                return result;
+            } catch (IllegalArgumentException error) {
+                return error("invalid_argument", safe(error));
+            } catch (IllegalStateException error) {
+                return error("conflict", safe(error));
+            }
+        });
+    }
+
+    private JsonObject applyPreview(JsonObject request) {
+        if (!request.has("confirm") || !request.get("confirm").isJsonPrimitive()
+                || !request.get("confirm").getAsJsonPrimitive().isBoolean()
+                || !request.get("confirm").getAsBoolean()) {
+            return error("invalid_argument", "apply_preview requires explicit confirm=true after review");
+        }
+        String draftId = required(request, "draft_id");
+        String previewHash = required(request, "preview_hash");
+        String revision = required(request, "expected_revision");
+        OperationReviewPlanner.Plan plan = reviewDrafts.resolve(draftId);
+        if (plan == null) return error("not_found", "Preview expired, was evicted or came from another client session");
+        if (!revision.equals(plan.expectedRevision()) || !previewHash.equals(
+                plan.preview().get("preview_hash").getAsString())) {
+            return error("conflict", "Review hash or book revision differs from the approved preview");
+        }
+        // Do not trust the preview as proof of validity or authorization:
+        // commit() delegates to the original server executor and its guards.
+        JsonObject result = commit(request, plan.operations());
+        result.addProperty("preview_hash", previewHash);
+        return result;
     }
 
     private JsonObject commitSingle(JsonObject request, JsonObject operation) {

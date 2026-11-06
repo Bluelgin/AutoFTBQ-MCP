@@ -31,6 +31,7 @@ public final class FTBQ2001QueryExecutor {
     public static JsonObject execute(String name, JsonObject arguments) {
         return switch (name) {
             case "inspect_game_data" -> GameDataCatalog.query(arguments);
+            case "compact_chapter_snapshot" -> FTBQ2001CompactSnapshot.read(arguments);
             case "get_selected_quest_details" -> selectedQuestDetails();
             case "search_registry" -> searchRegistry(arguments);
             case "search_registry_batch" -> searchRegistryBatch(arguments);

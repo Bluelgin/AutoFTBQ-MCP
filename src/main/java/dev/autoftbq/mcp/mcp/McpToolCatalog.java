@@ -67,6 +67,13 @@ public final class McpToolCatalog {
         tools.add(tool("ftbq.get_chapter",
                 "Read one chapter and its quest summaries from the live client quest book.",
                 obj(p("id", str("FTBQ object code string"))), List.of("id")));
+        tools.add(tool("ftbq.get_chapter_snapshot",
+                "Read a paginated, SNBT-free chapter inventory including quest coordinates, dependencies and task/reward type IDs. Truncation flags indicate partial coverage.",
+                obj(
+                        p("chapter_id", str("Existing chapter code string")),
+                        p("offset", integer("Quest offset, default 0")),
+                        p("limit", integer("1-30 quests, default 20"))
+                ), List.of("chapter_id")));
         tools.add(tool("ftbq.get_quest",
                 "Read one quest including dependencies, tasks, rewards and raw SNBT.",
                 obj(p("id", str("FTBQ object code string"))), List.of("id")));
@@ -300,6 +307,21 @@ public final class McpToolCatalog {
                 "Advanced low-level atomic transaction entry point. Operations use the version-neutral AutoFTBQ operation contract; prefer semantic tools when possible.",
                 merge(writeBase, obj(p("operations", array(objectAny("Operation objects"))))),
                 List.of("expected_revision", "operations")));
+        tools.add(tool("ftbq.preview_operations",
+                "Read-only, bounded intent preview for editing an existing book. Lists targeted object IDs, known before values, requested fields, destructive actions and unverified raw data effects. Not a dry run; does not prove server acceptance. Returns preview_hash and short-lived draft_id.",
+                obj(
+                        p("expected_revision", str("Current quest book revision from ftbq.get_context")),
+                        p("operations", array(objectAny("1-128 version-neutral operations; unsupported raw/upsert kinds require explicit advanced path")))
+                ), List.of("expected_revision", "operations")));
+        tools.add(tool("ftbq.apply_preview",
+                "Commit exactly one reviewed preview draft with confirm=true and the original revision. Uses the unchanged server permission, preflight, snapshot, rollback, idempotency and sync path. Draft ID is not authorization.",
+                obj(
+                        p("draft_id", str("ID returned by ftbq.preview_operations, expires after 10 minutes")),
+                        p("preview_hash", str("Hash returned by ftbq.preview_operations")),
+                        p("expected_revision", str("Original preview book revision; must still match server")),
+                        p("confirm", bool("Explicit approval of the displayed preview")),
+                        p("proposal_id", str("Optional stable idempotency ID for identical retries"))
+                ), List.of("draft_id", "preview_hash", "expected_revision", "confirm")));
         tools.add(tool("ftbq.undo_last",
                 "Undo the specified last AutoFTBQ proposal only if the quest book has not changed since it committed.",
                 obj(
