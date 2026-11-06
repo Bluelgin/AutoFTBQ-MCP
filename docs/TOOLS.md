@@ -99,6 +99,10 @@ Returns chapter-group / chapter overview and revision.
 
 Returns a chapter plus quest summaries.
 
+### ftbq.get_chapter_snapshot
+
+Paginated SNBT-free chapter inventory (1-30 quests/page, default 20). Contains revision, IDs, positions, dependencies and task/reward types with explicit counts/truncation flags. See [Reviewable editing](REVIEWABLE_EDITING.md).
+
 ### ftbq.get_quest
 
 Returns quest data, dependencies, tasks, rewards, and raw SNBT.
@@ -257,6 +261,10 @@ The same protection applies to chapter-group and reward-table deletion.
 Advanced low-level entry point for the version-neutral operation contract.
 
 Prefer semantic tools when they cover the task.
+
+### ftbq.preview_operations / ftbq.apply_preview
+
+Read-only advisory intent preview for up to 128 operations, with known before values, destructive flags and explicit unknown-SNBT warnings. The user-approved exact draft can be committed through the original server executor with revision/hash confirmation. Not a game dry run. Drafts expire after 10 minutes. See [Reviewable editing](REVIEWABLE_EDITING.md).
 
 ### ftbq.undo_last
 

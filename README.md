@@ -131,6 +131,7 @@ FTB Quests reads:
 - `ftbq.get_context`
 - `ftbq.get_book`
 - `ftbq.get_chapter`
+- `ftbq.get_chapter_snapshot` (SNBT-free paginated chapter inventory)
 - `ftbq.get_quest`
 - `ftbq.get_object`
 - `ftbq.list_task_types`
@@ -150,6 +151,7 @@ Safe authoring:
 - `ftbq.apply_dependency_plan`
 - `ftbq.delete_quest` / `ftbq.delete_chapter`
 - `ftbq.apply_operations`
+- `ftbq.preview_operations` / `ftbq.apply_preview` (existing-book edit review and confirmation)
 - `ftbq.undo_last`
 
 Explicit staged transactions:
