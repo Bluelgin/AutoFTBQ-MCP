@@ -10,12 +10,13 @@ public final class ReviewDraftStore {
     public static final int TTL_SECONDS = 600;
     private static final int MAX_DRAFTS = 16;
 
-    private record Stored(OperationReviewPlanner.Plan plan, long expiresAtMillis) {}
+    private record Stored(OperationReviewPlanner.Plan plan, String sessionKey, long expiresAtMillis) {}
     public record Ticket(String id, int ttlSeconds) {}
 
     private final Map<String, Stored> entries = new LinkedHashMap<>();
 
-    public synchronized Ticket store(OperationReviewPlanner.Plan plan) {
+    public synchronized Ticket store(OperationReviewPlanner.Plan plan, String sessionKey) {
+        if (sessionKey == null || sessionKey.isBlank()) throw new IllegalArgumentException("sessionKey required");
         purge();
         while (entries.size() >= MAX_DRAFTS) {
             Iterator<String> iterator = entries.keySet().iterator();
@@ -23,14 +24,14 @@ public final class ReviewDraftStore {
             iterator.remove();
         }
         String id = UUID.randomUUID().toString();
-        entries.put(id, new Stored(copy(plan), System.currentTimeMillis() + TTL_SECONDS * 1000L));
+        entries.put(id, new Stored(copy(plan), sessionKey, System.currentTimeMillis() + TTL_SECONDS * 1000L));
         return new Ticket(id, TTL_SECONDS);
     }
 
-    public synchronized OperationReviewPlanner.Plan resolve(String id) {
+    public synchronized OperationReviewPlanner.Plan resolve(String id, String sessionKey) {
         purge();
         Stored result = entries.get(id);
-        return result == null ? null : copy(result.plan());
+        return result == null || !result.sessionKey().equals(sessionKey) ? null : copy(result.plan());
     }
 
     private void purge() {

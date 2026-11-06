@@ -24,22 +24,23 @@ class ReviewDraftStoreTest {
     void savedDraftsCannotBeMutatedThroughOriginalOrReadback() {
         ReviewDraftStore store = new ReviewDraftStore();
         var source = plan();
-        var ticket = store.store(source);
+        var ticket = store.store(source, "session-A");
         assertEquals(ReviewDraftStore.TTL_SECONDS, ticket.ttlSeconds());
         source.operations().get(0).getAsJsonObject().addProperty("kind", "delete_quest");
-        var copy = store.resolve(ticket.id());
+        var copy = store.resolve(ticket.id(), "session-A");
         assertEquals("update_quest", copy.operations().get(0).getAsJsonObject().get("kind").getAsString());
         copy.operations().get(0).getAsJsonObject().addProperty("kind", "delete_quest");
-        assertEquals("update_quest", store.resolve(ticket.id()).operations()
+        assertEquals("update_quest", store.resolve(ticket.id(), "session-A").operations()
                 .get(0).getAsJsonObject().get("kind").getAsString());
-        assertNull(store.resolve("not-present"));
+        assertNull(store.resolve("not-present", "session-A"));
+        assertNull(store.resolve(ticket.id(), "session-B")); // A different world/server cannot reuse the draft.
     }
 
     @Test
     void storeIsBoundedToSixteenDrafts() {
         ReviewDraftStore store = new ReviewDraftStore();
-        String first = store.store(plan()).id();
-        for (int i = 0; i < 16; i++) store.store(plan());
-        assertNull(store.resolve(first));
+        String first = store.store(plan(), "session-A").id();
+        for (int i = 0; i < 16; i++) store.store(plan(), "session-A");
+        assertNull(store.resolve(first, "session-A"));
     }
 }

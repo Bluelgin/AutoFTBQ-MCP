@@ -169,7 +169,13 @@ public final class McpToolService {
                             case "object" -> game.object(id);
                             default -> error("invalid_argument", "Unsupported preview target");
                         });
-                ReviewDraftStore.Ticket ticket = reviewDrafts.store(plan);
+                JsonObject session = game.query("inspect_game_data", withKind(new JsonObject(), "capabilities"));
+                if (!session.has("status") || !"ok".equals(session.get("status").getAsString())
+                        || !session.has("data_version")) {
+                    return error("unavailable", "Cannot bind preview to the current game session");
+                }
+                ReviewDraftStore.Ticket ticket = reviewDrafts.store(
+                        plan, session.get("data_version").getAsString());
                 JsonObject result = plan.preview().deepCopy();
                 result.addProperty("draft_id", ticket.id());
                 result.addProperty("draft_ttl_seconds", ticket.ttlSeconds());
@@ -192,8 +198,15 @@ public final class McpToolService {
         String draftId = required(request, "draft_id");
         String previewHash = required(request, "preview_hash");
         String revision = required(request, "expected_revision");
-        OperationReviewPlanner.Plan plan = reviewDrafts.resolve(draftId);
-        if (plan == null) return error("not_found", "Preview expired, was evicted or came from another client session");
+        JsonObject session = client(() -> adapter().query(
+                "inspect_game_data", withKind(new JsonObject(), "capabilities")));
+        if (!session.has("status") || !"ok".equals(session.get("status").getAsString())
+                || !session.has("data_version")) {
+            return error("unavailable", "Current game session cannot be verified");
+        }
+        OperationReviewPlanner.Plan plan = reviewDrafts.resolve(
+                draftId, session.get("data_version").getAsString());
+        if (plan == null) return error("not_found", "Preview expired, was evicted or belongs to another game session");
         if (!revision.equals(plan.expectedRevision()) || !previewHash.equals(
                 plan.preview().get("preview_hash").getAsString())) {
             return error("conflict", "Review hash or book revision differs from the approved preview");
