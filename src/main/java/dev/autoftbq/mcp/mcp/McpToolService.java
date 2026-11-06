@@ -5,6 +5,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.autoftbq.mcp.client.ClientThread;
+import dev.autoftbq.mcp.creator.CreatorCompactBlueprint;
+import dev.autoftbq.mcp.creator.CreatorDraftStore;
 import dev.autoftbq.mcp.creator.CreatorBlueprintCompiler;
 import dev.autoftbq.mcp.compat.CompatibilityManager;
 import dev.autoftbq.mcp.compat.ftbq.FtbqClientAdapter;
@@ -21,16 +23,18 @@ import java.util.function.Supplier;
 
 public final class McpToolService {
     private final TransactionStagingService transactions = new TransactionStagingService();
+    private final CreatorDraftStore creatorDrafts = new CreatorDraftStore();
 
     public JsonObject invoke(String name, JsonObject args) {
         final JsonObject arguments = args == null ? new JsonObject() : args;
         return switch (name) {
             case "autoftbq.health" -> health();
             case "autoftbq.creator_context" -> creatorContext();
-            case "autoftbq.creator_preview" -> CreatorBlueprintCompiler.compile(requiredObject(arguments, "blueprint")).preview();
+            case "autoftbq.creator_preview" -> creatorPreview(arguments);
             case "autoftbq.creator_apply" -> creatorApply(arguments);
             case "minecraft.capabilities" -> client(() -> adapter().query("inspect_game_data", withKind(new JsonObject(), "capabilities")));
             case "minecraft.search_registry" -> searchRegistry(arguments);
+            case "minecraft.search_items" -> client(() -> adapter().query("inspect_game_data", withKind(arguments.deepCopy(), "item_index_search")));
             case "minecraft.validate_ids" -> validateIds(arguments);
             case "minecraft.inspect_item" -> client(() -> adapter().query("inspect_game_data", withKind(arguments.deepCopy(), "item_evidence")));
             case "minecraft.search_recipes" -> client(() -> adapter().query("inspect_game_data", withKind(arguments.deepCopy(), "recipes")));
@@ -114,13 +118,40 @@ public final class McpToolService {
         });
     }
 
+    private JsonObject creatorPreview(JsonObject request) {
+        JsonObject source = requiredObject(request, "blueprint");
+        CreatorBlueprintCompiler.Compiled plan =
+                CreatorBlueprintCompiler.compile(CreatorCompactBlueprint.expand(source));
+        CreatorDraftStore.Stored stored = creatorDrafts.remember(plan);
+        JsonObject preview = plan.preview().deepCopy();
+        preview.addProperty("draft_id", stored.id());
+        preview.addProperty("draft_ttl_seconds", CreatorDraftStore.TTL_SECONDS);
+        preview.addProperty("blueprint_format", source.has("chapter") && source.get("chapter").isJsonPrimitive()
+                ? "compact" : "full");
+        return preview;
+    }
+
     private JsonObject creatorApply(JsonObject request) {
         if (!request.has("confirm") || !request.get("confirm").isJsonPrimitive()
+                || !request.get("confirm").getAsJsonPrimitive().isBoolean()
                 || !request.get("confirm").getAsBoolean()) {
             return error("invalid_argument", "Creator apply requires explicit confirm=true after preview review");
         }
-        CreatorBlueprintCompiler.Compiled plan =
-                CreatorBlueprintCompiler.compile(requiredObject(request, "blueprint"));
+        boolean hasDraft = !optional(request, "draft_id").isBlank();
+        boolean hasBlueprint = request.has("blueprint");
+        if (hasDraft == hasBlueprint) {
+            return error("invalid_argument", "Provide exactly one of draft_id or blueprint");
+        }
+        CreatorBlueprintCompiler.Compiled plan;
+        if (hasDraft) {
+            plan = creatorDrafts.resolve(required(request, "draft_id"));
+            if (plan == null) {
+                return error("not_found", "Preview draft expired, was evicted, or belongs to a previous game session; preview again");
+            }
+        } else {
+            plan = CreatorBlueprintCompiler.compile(
+                    CreatorCompactBlueprint.expand(requiredObject(request, "blueprint")));
+        }
         String expectedHash = required(request, "preview_hash");
         if (!plan.preview().get("preview_hash").getAsString().equals(expectedHash)) {
             return error("conflict", "Blueprint differs from the reviewed creator_preview; preview again before applying");

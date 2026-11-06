@@ -65,7 +65,7 @@ public final class GameDataCatalog {
                     "registry_page:fluid", "registry_page:mob_effect", "registry_page:stat",
                     "registry_page:recipe_type", "registry_page:biome", "registry_page:dimension",
                     "registry_page:advancement",
-                    "item_evidence", "recipes",
+                    "item_evidence", "item_index_search", "recipes",
                     "server_resource:loot_tables", "server_resource:advancements"
             }) supported.add(entry);
             result.add("supported", supported);
@@ -85,6 +85,12 @@ public final class GameDataCatalog {
             result.addProperty("status", "unavailable");
             result.addProperty("message", "No client world is loaded.");
             return result;
+        }
+
+        if ("item_index_search".equals(kind)) {
+            JsonObject found = ItemRegistryIndex.search(args, version);
+            found.addProperty("schema_version", 1);
+            return found;
         }
 
         if ("registry_page".equals(kind)) {

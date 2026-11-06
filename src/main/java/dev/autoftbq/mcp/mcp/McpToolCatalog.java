@@ -22,17 +22,18 @@ public final class McpToolCatalog {
                 obj(), List.of()));
         tools.add(tool("autoftbq.creator_preview",
                 "Validate and auto-layout a proposed NEW chapter blueprint without writing game data. Returns a compact plan and preview_hash; no AI is embedded.",
-                obj(p("blueprint", objectAny("Blueprint: chapter {title,subtitle?,icon?,group_id?}, quests [{key,title,subtitle?,description?,icon?,depends_on?:[local keys],tasks?:[{kind:item|checkmark|xp,...}],rewards?:[{kind:item|xp|xp_levels,...}]}]"))),
+                obj(p("blueprint", objectAny("Full chapter/quests blueprint OR compact {chapter:string,quests:[{id,get?,n?,after?,give?,give_n?,title?,desc?}]}"))),
                 List.of("blueprint")));
         tools.add(tool("autoftbq.creator_apply",
-                "After user review, compile the SAME blueprint again and atomically create its chapter and quests. Requires confirm=true, preview_hash and current expected_revision. Item IDs are checked against the live registry; server permissions and rollback still apply.",
+                "After review, atomically apply the preview by short-lived draft_id OR resubmit the identical full/compact blueprint. Exactly one is required; preview_hash, confirm=true, fresh revision and server permissions remain mandatory.",
                 obj(
-                        p("blueprint", objectAny("Exact same blueprint previously passed to creator_preview")),
+                        p("blueprint", objectAny("Optional original full/compact blueprint; omit when draft_id is supplied")),
+                        p("draft_id", str("Optional short-lived ID returned by creator_preview; omit when blueprint is supplied")),
                         p("preview_hash", str("SHA-256 plan hash from creator_preview")),
                         p("expected_revision", str("Latest FTBQ book revision")),
                         p("confirm", bool("Explicit user approval of this preview (must be true)")),
                         p("proposal_id", str("Optional stable idempotency ID for retries"))
-                ), List.of("blueprint", "preview_hash", "expected_revision", "confirm")));
+                ), List.of("preview_hash", "expected_revision", "confirm")));
 
         tools.add(tool("minecraft.capabilities",
                 "Describe live game-data coverage and explicit unknown areas. Call this before claiming complete modpack coverage.",
@@ -47,6 +48,15 @@ public final class McpToolCatalog {
                         p("limit", integer("1-100 results")),
                         p("data_version", str("Optional version from an earlier page"))
                 ), List.of("registry")));
+        tools.add(tool("minecraft.search_items",
+                "Small, ranked search of a locally cached live item registry, matching resource IDs and localized names. Returns at most 30 candidates, not the whole modpack. Registration is not obtainability.",
+                obj(
+                        p("query", str("ID substring or localized display-name substring")),
+                        p("namespace", str("Optional mod namespace, e.g. create")),
+                        p("offset", integer("Pagination offset")),
+                        p("limit", integer("Maximum 30 matches; default 20")),
+                        p("data_version", str("Optional data version from prior page"))
+                ), List.of()));
         tools.add(tool("minecraft.validate_ids",
                 "Validate exact registry ids against the live game or authoritative server adapter. Current 2001 coverage includes item, block, entity, fluid, mob_effect, stat, biome, structure, dimension and advancement.",
                 obj(
