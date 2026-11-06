@@ -38,7 +38,8 @@ class OperationReviewPlannerTest {
         assertTrue(result.preview().getAsJsonArray("changes").get(1)
                 .getAsJsonObject().get("destructive").getAsBoolean());
         assertFalse(result.preview().toString().contains("must_never_appear"));
-        assertFalse(result.preview().toString().contains("Better title"));
+        assertTrue(result.preview().toString().contains("Better title"));
+        assertFalse(result.preview().toString().contains("data_snbt"));
         assertEquals(64, result.preview().get("preview_hash").getAsString().length());
         request.get(0).getAsJsonObject().getAsJsonObject("changes").addProperty("title", "Mutated");
         assertTrue(result.operations().toString().contains("Better title"));

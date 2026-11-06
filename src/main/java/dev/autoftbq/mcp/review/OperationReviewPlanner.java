@@ -136,6 +136,7 @@ public final class OperationReviewPlanner {
                 }
             }
             change.add("requested_fields", fields);
+            change.add("requested_values", requestedValues(op));
 
             boolean destructiveEdit = DELETE.contains(kind);
             if (destructiveEdit) {
@@ -168,11 +169,45 @@ public final class OperationReviewPlanner {
         return new Plan(preview, operations.deepCopy(), expectedRevision);
     }
 
+    /**
+     * Show intended public-facing fields, but never echo SNBT or blindly
+     * expose arbitrarily long payloads through preview.
+     */
+    private static JsonObject requestedValues(JsonObject operation) {
+        JsonObject values = new JsonObject();
+        JsonObject source = operation.has("changes") && operation.get("changes").isJsonObject()
+                ? operation.getAsJsonObject("changes") : operation;
+        for (String key : source.keySet()) {
+            if (!Set.of("title", "subtitle", "description", "icon", "x", "y", "chapter_id",
+                    "item_id", "count", "amount", "dependency_id", "new_index",
+                    "group_id", "object_kind", "type_id").contains(key)) continue;
+            JsonElement value = source.get(key);
+            if (value.isJsonPrimitive()) {
+                if (value.getAsJsonPrimitive().isString() && value.getAsString().length() > 500) {
+                    values.addProperty(key + "_preview", value.getAsString().substring(0, 500));
+                    values.addProperty(key + "_truncated", true);
+                } else values.add(key, value.deepCopy());
+            } else if (key.equals("description") && value.isJsonArray()) {
+                values.addProperty("description_lines", value.getAsJsonArray().size());
+            }
+        }
+        return values;
+    }
+
     private static JsonObject safeSummary(JsonObject raw) {
         JsonObject safe = new JsonObject();
         for (String field : new String[]{"id", "title", "object_type", "type_id",
                 "chapter_id", "x", "y", "task_count", "reward_count"}) {
             if (raw.has(field)) safe.add(field, raw.get(field).deepCopy());
+        }
+        if (raw.has("tasks") && raw.get("tasks").isJsonArray()) {
+            safe.addProperty("task_count", raw.getAsJsonArray("tasks").size());
+        }
+        if (raw.has("rewards") && raw.get("rewards").isJsonArray()) {
+            safe.addProperty("reward_count", raw.getAsJsonArray("rewards").size());
+        }
+        if (raw.has("quests") && raw.get("quests").isJsonArray()) {
+            safe.addProperty("quest_count", raw.getAsJsonArray("quests").size());
         }
         // Never return the target's bulky data_snbt in a review.
         return safe;

@@ -40,7 +40,7 @@ Tool: `ftbq.preview_operations`
 Returns `status`, `preview_kind:"intent_not_simulation"`, `preview_hash`,
 `draft_id`, `draft_ttl_seconds`, `book_revision`, `changes`, `warnings`,
 and destructive/unverified counts. Each changed object is identified by stable
-ID and the known before metadata. This deliberately omits raw SNBT.
+ID, known before metadata and safely bounded requested field values. This deliberately omits raw SNBT.
 
 Reviewable initial subset: create chapter/quest, update/move/reorder chapter
 and quest, remove task/reward, delete quest/chapter, add official semantic
@@ -68,7 +68,7 @@ Only after the player approves the shown plan and its risks, call
 }
 ~~~
 
-- Drafts last 10 minutes, max 16, memory-only. A draft ID is **not**
+- Drafts last 10 minutes, max 16, memory-only, and are bound to the current client world/data session; switching worlds or reloading game data invalidates reuse. A draft ID is **not**
   authorization.
 - Hash binds the exact plan **and the base revision**. Wrong hash,
   mismatched revision, expired draft or missing confirmation fails closed.
