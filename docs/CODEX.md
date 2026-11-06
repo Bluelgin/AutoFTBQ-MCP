@@ -155,6 +155,14 @@ You can then follow with normal instructions such as:
 Read the current book and create a small progression line for the Create mod. Use real registered item IDs and recipes from the running game. I want to watch the quests appear live in FTB Quests.
 ```
 
+## Creator: one-sentence quest wishes
+
+For beginner users, also provide Codex with [Creator Skill](../skills/autoftbq-creator/SKILL.md) or its text. Then a wish as short as "create a beginner-friendly quest chapter for Create" starts an evidence-grounded planning flow: context → investigation → blueprint → preview → player review → safe commit → validation.
+
+The model does not need to hand-calculate quest coordinates or issue dozens of write calls. `autoftbq.creator_preview` is read-only and `autoftbq.creator_apply` requires an exact preview hash, a fresh book revision and explicit approval.
+
+See [Creator guide](CREATOR.md). Do not promise that a short wish always produces a playable survival progression; real modpack recipes, scripts and gameplay must be checked.
+
 ## 7. Selecting quests for Codex in-game
 
 While the FTB Quests screen is open:

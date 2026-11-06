@@ -19,6 +19,14 @@ Common status values include:
 
 A missing capability or unknown coverage must not be converted into a claim that game content does not exist.
 
+## Wish-based Creator facade
+
+- `autoftbq.creator_context` reads currently loaded FTBQ book, current selection, and game-data coverage. It does **not** claim full knowledge of the pack.
+- `autoftbq.creator_preview(blueprint)` accepts the original full blueprint or compact item-first form; validates layout, dependencies and returns `preview_hash` and `draft_id`. No game edits.
+- `autoftbq.creator_apply(draft_id? | blueprint?, preview_hash, expected_revision, confirm, proposal_id?)` requires **exactly one** plan source; a draft is memory-only (10-minute TTL, max 16, reset on restart). The original blueprint path is unchanged. Fresh revision, human confirmation, live ID validation and atomic server writes are mandatory.
+
+See [Creator guide](CREATOR.md) for schema, safety boundaries and example. The external AI must design the chapter; this is not a natural-language-to-model server.
+
 ## Game knowledge
 
 ### minecraft.capabilities
@@ -50,6 +58,10 @@ Results include a `data_version`. If the game reloads tags/recipes while paging,
 ### minecraft.validate_ids
 
 Exact registry ID validation for supported registry kinds.
+
+### minecraft.search_items
+
+Bounded, ranked search of a lazily cached client-local item registry by ID substring and/or localized name. `namespace` is optional; `query` or `namespace` is required. `limit` max 30, with optional `offset` and `data_version`. Returns item IDs and display names only; does not imply survival obtainability.
 
 ### minecraft.inspect_item
 

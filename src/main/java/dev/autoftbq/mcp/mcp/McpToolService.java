@@ -5,6 +5,9 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.autoftbq.mcp.client.ClientThread;
+import dev.autoftbq.mcp.creator.CreatorCompactBlueprint;
+import dev.autoftbq.mcp.creator.CreatorDraftStore;
+import dev.autoftbq.mcp.creator.CreatorBlueprintCompiler;
 import dev.autoftbq.mcp.compat.CompatibilityManager;
 import dev.autoftbq.mcp.compat.ftbq.FtbqClientAdapter;
 import dev.autoftbq.mcp.platform.GamePlatform;
@@ -20,13 +23,18 @@ import java.util.function.Supplier;
 
 public final class McpToolService {
     private final TransactionStagingService transactions = new TransactionStagingService();
+    private final CreatorDraftStore creatorDrafts = new CreatorDraftStore();
 
     public JsonObject invoke(String name, JsonObject args) {
         final JsonObject arguments = args == null ? new JsonObject() : args;
         return switch (name) {
             case "autoftbq.health" -> health();
+            case "autoftbq.creator_context" -> creatorContext();
+            case "autoftbq.creator_preview" -> creatorPreview(arguments);
+            case "autoftbq.creator_apply" -> creatorApply(arguments);
             case "minecraft.capabilities" -> client(() -> adapter().query("inspect_game_data", withKind(new JsonObject(), "capabilities")));
             case "minecraft.search_registry" -> searchRegistry(arguments);
+            case "minecraft.search_items" -> client(() -> adapter().query("inspect_game_data", withKind(arguments.deepCopy(), "item_index_search")));
             case "minecraft.validate_ids" -> validateIds(arguments);
             case "minecraft.inspect_item" -> client(() -> adapter().query("inspect_game_data", withKind(arguments.deepCopy(), "item_evidence")));
             case "minecraft.search_recipes" -> client(() -> adapter().query("inspect_game_data", withKind(arguments.deepCopy(), "recipes")));
@@ -83,6 +91,96 @@ public final class McpToolService {
             case "ftbq.transaction_abort" -> transactions.abort(required(arguments, "transaction_id"));
             default -> error("unknown_tool", "Unknown tool: " + name);
         };
+    }
+
+    private JsonObject creatorContext() {
+        return client(() -> {
+            JsonObject result = new JsonObject();
+            var current = adapter();
+            JsonObject book = current.book();
+            if (book.has("status") && !"ok".equals(book.get("status").getAsString())) return book;
+            result.addProperty("status", "ok");
+            result.add("context", current.context());
+            // Keep the Creator overview compact. The ordinary get_book result
+            // includes raw reward-table SNBT, which is unnecessary for a wish
+            // and can consume a large fraction of the agent's context window.
+            JsonObject summary = new JsonObject();
+            if (book.has("book_revision")) summary.add("book_revision", book.get("book_revision").deepCopy());
+            if (book.has("can_edit")) summary.add("can_edit", book.get("can_edit").deepCopy());
+            if (book.has("chapter_groups")) summary.add("chapter_groups", book.get("chapter_groups").deepCopy());
+            if (book.has("reward_tables") && book.get("reward_tables").isJsonArray()) {
+                summary.addProperty("reward_table_count", book.getAsJsonArray("reward_tables").size());
+            }
+            result.add("book", summary);
+            result.add("game_data_coverage", current.query("inspect_game_data", withKind(new JsonObject(), "capabilities")));
+            result.addProperty("hint", "Choose a chapter goal using actual loaded facts. Verify item IDs and recipes; registered does not mean obtainable.");
+            return result;
+        });
+    }
+
+    private JsonObject creatorPreview(JsonObject request) {
+        JsonObject source = requiredObject(request, "blueprint");
+        CreatorBlueprintCompiler.Compiled plan =
+                CreatorBlueprintCompiler.compile(CreatorCompactBlueprint.expand(source));
+        CreatorDraftStore.Stored stored = creatorDrafts.remember(plan);
+        JsonObject preview = plan.preview().deepCopy();
+        preview.addProperty("draft_id", stored.id());
+        preview.addProperty("draft_ttl_seconds", CreatorDraftStore.TTL_SECONDS);
+        preview.addProperty("blueprint_format", source.has("chapter") && source.get("chapter").isJsonPrimitive()
+                ? "compact" : "full");
+        return preview;
+    }
+
+    private JsonObject creatorApply(JsonObject request) {
+        if (!request.has("confirm") || !request.get("confirm").isJsonPrimitive()
+                || !request.get("confirm").getAsJsonPrimitive().isBoolean()
+                || !request.get("confirm").getAsBoolean()) {
+            return error("invalid_argument", "Creator apply requires explicit confirm=true after preview review");
+        }
+        boolean hasDraft = !optional(request, "draft_id").isBlank();
+        boolean hasBlueprint = request.has("blueprint");
+        if (hasDraft == hasBlueprint) {
+            return error("invalid_argument", "Provide exactly one of draft_id or blueprint");
+        }
+        CreatorBlueprintCompiler.Compiled plan;
+        if (hasDraft) {
+            plan = creatorDrafts.resolve(required(request, "draft_id"));
+            if (plan == null) {
+                return error("not_found", "Preview draft expired, was evicted, or belongs to a previous game session; preview again");
+            }
+        } else {
+            plan = CreatorBlueprintCompiler.compile(
+                    CreatorCompactBlueprint.expand(requiredObject(request, "blueprint")));
+        }
+        String expectedHash = required(request, "preview_hash");
+        if (!plan.preview().get("preview_hash").getAsString().equals(expectedHash)) {
+            return error("conflict", "Blueprint differs from the reviewed creator_preview; preview again before applying");
+        }
+        // Do not silently accept invented IDs. Registry membership is only a
+        // prerequisite, not proof of survival obtainable content.
+        for (int offset = 0; offset < plan.itemIds().size(); offset += 64) {
+            JsonObject query = new JsonObject();
+            query.addProperty("registry", "item");
+            JsonArray ids = new JsonArray();
+            for (int i = offset; i < Math.min(offset + 64, plan.itemIds().size()); i++) {
+                ids.add(plan.itemIds().get(i));
+            }
+            query.add("ids", ids);
+            JsonObject validation = client(() -> adapter().query("validate_registry_ids", query));
+            if (!validation.has("results") || !validation.get("results").isJsonArray()
+                    || validation.getAsJsonArray("results").size() != ids.size()) {
+                return error("unavailable", "Could not validate item IDs against the live game registry");
+            }
+            for (JsonElement item : validation.getAsJsonArray("results")) {
+                JsonObject value = item.getAsJsonObject();
+                if (!value.has("exists") || !value.get("exists").getAsBoolean()) {
+                    return error("invalid_argument", "Unknown item ID in blueprint: " + value.get("id").getAsString());
+                }
+            }
+        }
+        JsonObject result = commit(request, plan.operations());
+        result.addProperty("creator_preview_hash", expectedHash);
+        return result;
     }
 
     private JsonObject health() {
